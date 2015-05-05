@@ -6,6 +6,10 @@ import android.app.ActionBar;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -16,12 +20,16 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.support.v4.widget.DrawerLayout;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.TextView;
+
+import java.text.SimpleDateFormat;
 
 
 public class MainActivity extends Activity
         implements NavigationDrawerFragment.NavigationDrawerCallbacks,
-        SettingsFragment.SettingsCallbacks {
+        SettingsFragment.SettingsCallbacks,
+        HomeFragment.HomeCallbacks{
 
     /**
      * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
@@ -33,7 +41,14 @@ public class MainActivity extends Activity
      */
     private CharSequence mTitle;
 
+
+    private HomeFragment mHomeFragment;
     private SettingsFragment mSettingsFragment;
+
+    private int mDevice=Integer.parseInt(getString(R.string.settings_device_id_value));
+    private double mLongitudinal=Double.parseDouble(getString(R.string.settings_longitudinal_wheelbase_value));
+    private double mTransverse=Double.parseDouble(getString(R.string.settings_transverse_wheelbase_value));
+    private String mServer=getString(R.string.settings_server_value);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +64,37 @@ public class MainActivity extends Activity
                 R.id.navigation_drawer,
                 (DrawerLayout) findViewById(R.id.drawer_layout));
 
+        //sensor
+        SensorManager sm = (SensorManager) this.getSystemService(SENSOR_SERVICE);
+        Sensor sensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+
+        sm.registerListener(new SensorEventListener() {
+            public void onSensorChanged(SensorEvent event) {
+                long time;
+                double longitude = 10, latitude = 10;
+                double x, y, z;
+                x = event.values[SensorManager.DATA_X];
+                y = event.values[SensorManager.DATA_Y];
+                z = event.values[SensorManager.DATA_Z];
+                time = (new java.util.Date()).getTime();
+                String data = "";
+                data += "device=" + mDevice + "\n";
+                data += "&longitudinal=" + mLongitudinal + "\n";
+                data += "&transverse=" + mTransverse + "\n";
+                data += "&time=" + time + "\n";
+                data += "&longitude" + longitude + "\n";
+                data += "&latitude" + latitude + "\n";
+                data += "&x=" + x + "&y=" + y + "&z=" + z + "\n";
+                try {
+                    // TODO upload data
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+            }
+        }, sensor, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
     @Override
@@ -57,14 +103,18 @@ public class MainActivity extends Activity
         FragmentManager fragmentManager = getFragmentManager();
         switch(position){
             case 0:
+                mHomeFragment=               HomeFragment.newInstance("","");
+                fragmentManager.beginTransaction()
+                    .replace(R.id.container,mHomeFragment )
+                    .commit();
                 break;
             case 1:
+                mSettingsFragment=    SettingsFragment.newInstance("","");
                 fragmentManager.beginTransaction()
-                        .replace(R.id.container, SettingsFragment.newInstance("",""))
+                        .replace(R.id.container, mSettingsFragment)
                         .commit();
                 break;
             default:
-
                 fragmentManager.beginTransaction()
                         .replace(R.id.container, PlaceholderFragment.newInstance(position + 1))
                         .commit();
@@ -125,6 +175,11 @@ public class MainActivity extends Activity
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onHomeChanged() {
+
     }
 
     /**
