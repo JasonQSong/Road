@@ -5,6 +5,9 @@ angular.module('roadServerApp')
     $scope.menu = [{
       'title': 'Home',
       'link': '/'
+    },{
+      'title':'Accelerometer',
+      'link': '/accelerometer'
     }];
 
     $scope.isCollapsed = true;

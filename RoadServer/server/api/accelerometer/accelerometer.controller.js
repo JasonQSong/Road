@@ -23,6 +23,7 @@ exports.show = function(req, res) {
 // Creates a new accelerometer in the DB.
 exports.create = function(req, res) {
   Accelerometer.create(req.body, function(err, accelerometer) {
+    console.log("acc create:"+JSON.stringify(req.body));
     if(err) { return handleError(res, err); }
     return res.json(201, accelerometer);
   });

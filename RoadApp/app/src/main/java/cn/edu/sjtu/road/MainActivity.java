@@ -12,6 +12,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -23,13 +24,21 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 
 public class MainActivity extends Activity
         implements NavigationDrawerFragment.NavigationDrawerCallbacks,
         SettingsFragment.SettingsCallbacks,
-        HomeFragment.HomeCallbacks{
+        HomeFragment.HomeCallbacks {
 
     /**
      * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
@@ -45,12 +54,69 @@ public class MainActivity extends Activity
     private HomeFragment mHomeFragment;
     private SettingsFragment mSettingsFragment;
 
-    private int mDevice=Integer.parseInt(getString(R.string.settings_device_id_value));
-    private double mLongitudinal=Double.parseDouble(getString(R.string.settings_longitudinal_wheelbase_value));
-    private double mTransverse=Double.parseDouble(getString(R.string.settings_transverse_wheelbase_value));
-    private String mServer=getString(R.string.settings_server_value);
+    private int mDevice;// = Integer.parseInt(getString(R.string.settings_device_id_value));
+    private double mLongitudinal;// = Double.parseDouble(getString(R.string.settings_longitudinal_wheelbase_value));
+    private double mTransverse;// = Double.parseDouble(getString(R.string.settings_transverse_wheelbase_value));
+    private double mLongitude;// = Double.parseDouble(getString(R.string.default_longitude));
+    private double mLatitude;// = Double.parseDouble(getString(R.string.default_latitude));
+    private String mServer;// = getString(R.string.settings_server_value);
+    private ArrayList<AccelerometerModel> AccelerometerModelArrayList;// = new ArrayList<AccelerometerModel>();
+    private int mPackageTotal;// = Integer.parseInt(getString(R.string.sensor_package_total));
+    private int mPackageCollect;// = Integer.parseInt(getString(R.string.sensor_package_collect));
+    private boolean isPassingHole;//=false;
+    private int passingHoleCount;// = 0;
 
-    @Override
+    private ExecutorService threadPool;
+
+    protected void sendAccelerometerArray(ArrayList<AccelerometerModel> accelerometerArray)     {
+        for(int i=0;i<accelerometerArray.size();i++){
+            sendAccelerometer(accelerometerArray.get(i));
+        }
+    }
+    protected void sendAccelerometer(AccelerometerModel accelerometerData) {
+        class SendAccelerometerThread extends Thread {
+            AccelerometerModel accelerometerData;
+
+            public SendAccelerometerThread(AccelerometerModel accelerometerData) {
+                this.accelerometerData = accelerometerData;
+            }
+
+            @Override
+            public void run() {
+                try {
+                    // TODO upload data
+                    Log.v("sendAccelerometer", accelerometerData.toJson().toString());
+                    byte[] entity = accelerometerData.toJson().toString().getBytes();
+                    URL url = new URL("http://" + mServer + "/api/accelerometers");
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setDoOutput(true);
+                    connection.setDoInput(true);
+                    connection.setRequestMethod("POST");
+                    connection.setRequestProperty("Content-Type", "application/json");
+                    connection.setRequestProperty("Content-Length", String.valueOf(entity.length));
+                    OutputStream os = connection.getOutputStream();
+                    os.write(entity);
+                    Log.v("sendAccelerometer", "" + connection.getResponseCode());
+                    Log.v("sendAccelerometer", "" + connection.getResponseMessage());
+            /*
+            String model = "";
+            model += "device=" + data.device + "\n";
+            model += "&longitudinal=" + data.longitudinal + "\n";
+            model += "&transverse=" + data.transverse + "\n";
+            model += "&time=" + data.time + "\n";
+            model += "&longitude=" + data.longitude + "\n";
+            model += "&latitude=" + data.latitude + "\n";
+            model += "&x=" + data.x + "\n";
+            model += "&y=" + data.y + "\n";
+            model += "&z=" + data.z + "\n";
+            */
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        threadPool.execute(new SendAccelerometerThread(accelerometerData));
+    }
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -64,31 +130,56 @@ public class MainActivity extends Activity
                 R.id.navigation_drawer,
                 (DrawerLayout) findViewById(R.id.drawer_layout));
 
+        //init
+        threadPool = Executors.newCachedThreadPool();
+        mDevice = Integer.parseInt(getString(R.string.settings_device_id_value));
+        mLongitudinal = Double.parseDouble(getString(R.string.settings_longitudinal_wheelbase_value));
+        mTransverse = Double.parseDouble(getString(R.string.settings_transverse_wheelbase_value));
+        mLongitude = Double.parseDouble(getString(R.string.default_longitude));
+        mLatitude = Double.parseDouble(getString(R.string.default_latitude));
+        mServer = getString(R.string.settings_server_value);
+        AccelerometerModelArrayList = new ArrayList<AccelerometerModel>();
+        mPackageTotal = Integer.parseInt(getString(R.string.sensor_package_total));
+        mPackageCollect = Integer.parseInt(getString(R.string.sensor_package_collect));
+        isPassingHole = false;
+        passingHoleCount = 0;
         //sensor
         SensorManager sm = (SensorManager) this.getSystemService(SENSOR_SERVICE);
         Sensor sensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         sm.registerListener(new SensorEventListener() {
             public void onSensorChanged(SensorEvent event) {
-                long time;
-                double longitude = 10, latitude = 10;
-                double x, y, z;
-                x = event.values[SensorManager.DATA_X];
-                y = event.values[SensorManager.DATA_Y];
-                z = event.values[SensorManager.DATA_Z];
-                time = (new java.util.Date()).getTime();
-                String data = "";
-                data += "device=" + mDevice + "\n";
-                data += "&longitudinal=" + mLongitudinal + "\n";
-                data += "&transverse=" + mTransverse + "\n";
-                data += "&time=" + time + "\n";
-                data += "&longitude" + longitude + "\n";
-                data += "&latitude" + latitude + "\n";
-                data += "&x=" + x + "&y=" + y + "&z=" + z + "\n";
+                AccelerometerModel data = new AccelerometerModel();
+                data.device = mDevice;
+                data.longitudinal = mLongitudinal;
+                data.transverse = mTransverse;
+                data.time = (new java.util.Date()).getTime();
+                data.longitude = mLongitude;
+                data.latitude = mLatitude;
+                data.x = event.values[SensorManager.DATA_X];
+                data.y = event.values[SensorManager.DATA_Y];
+                data.z = event.values[SensorManager.DATA_Z];
+
+                TextView tv = (TextView) findViewById(R.id.home_screen_text_view);
                 try {
-                    // TODO upload data
+                    tv.setText(data.toJson().toString());
                 } catch (Exception e) {
                     e.printStackTrace();
+                }
+                sendAccelerometer(data);
+                while (AccelerometerModelArrayList.size() >= mPackageTotal)
+                    AccelerometerModelArrayList.remove(0);
+                AccelerometerModelArrayList.add(data);
+                if (data.x > 0.5) {//TODO filter
+                    isPassingHole = true;
+                }
+                if (isPassingHole) {
+                    passingHoleCount++;
+                    if (passingHoleCount >= mPackageCollect) {
+                        sendAccelerometerArray(AccelerometerModelArrayList);
+                        isPassingHole = false;
+                        passingHoleCount = 0;
+                    }
                 }
             }
 
@@ -101,15 +192,15 @@ public class MainActivity extends Activity
     public void onNavigationDrawerItemSelected(int position) {
         // update the main content by replacing fragments
         FragmentManager fragmentManager = getFragmentManager();
-        switch(position){
+        switch (position) {
             case 0:
-                mHomeFragment=               HomeFragment.newInstance("","");
+                mHomeFragment = HomeFragment.newInstance("", "");
                 fragmentManager.beginTransaction()
-                    .replace(R.id.container,mHomeFragment )
-                    .commit();
+                        .replace(R.id.container, mHomeFragment)
+                        .commit();
                 break;
             case 1:
-                mSettingsFragment=    SettingsFragment.newInstance("","");
+                mSettingsFragment = SettingsFragment.newInstance("", "");
                 fragmentManager.beginTransaction()
                         .replace(R.id.container, mSettingsFragment)
                         .commit();
