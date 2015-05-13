@@ -79,7 +79,7 @@ exports.test=function(req, res) {
       fs.writeFile(inputFilename, dataStr, function(err){  
         if(err) { return handleError(res, err); }
 
-        inputFilename='.\\..\\Wenzhuo\\data\\2015-1-22\\1.txt';
+        //inputFilename='.\\..\\Wenzhuo\\data\\2015-1-22\\1.txt';
         process.exec('..\\Pothole\\pothole.exe'+' i '+inputFilename+' o ' +outputFilename,
           function(err){
             if(err) { return handleError(res, err); }

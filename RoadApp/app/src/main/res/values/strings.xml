@@ -28,8 +28,8 @@
     <string name="default_latitude">10.0</string>
 
 
-    <string name="sensor_package_collect">5</string>
-    <string name="sensor_package_total">10</string>
+    <string name="sensor_package_collect">50</string>
+    <string name="sensor_package_total">100</string>
     <string name="hello_blank_fragment">hello</string>
 
 
