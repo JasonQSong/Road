@@ -29,6 +29,23 @@ exports.create = function(req, res) {
   });
 };
 
+exports.createArray = function(req, res) {
+  var errs=[];
+  var acceleros=[];
+  for(var i=0;i<req.body.length;i++){
+    Accelerometer.create(req.body[i], function(err, accelerometer) {
+      console.log("acc create:"+JSON.stringify(req.body));
+      if(err) { errs.push(err); }
+      else{ acceleros.push(accelerometer); }
+    });
+  }
+  if(errs.length>0){
+    return handleError(res,errs);
+  }else{
+    res.json(201,acceleros);
+  }
+};
+
 // Updates an existing accelerometer in the DB.
 exports.update = function(req, res) {
   if(req.body._id) { delete req.body._id; }
