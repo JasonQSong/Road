@@ -22,6 +22,18 @@
             android:layout_height="wrap_content"
             android:id="@+id/home_screen_settings"
             android:text="@string/hello_blank_fragment" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/home_screen_last_hole"
+            android:text="@string/hello_blank_fragment" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/refresh"
+            android:id="@+id/buttonRefreshHome"
+            android:onClick="onButtonRefreshHomePressed" />
 
     </LinearLayout>
 

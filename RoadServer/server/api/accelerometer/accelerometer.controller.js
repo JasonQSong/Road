@@ -32,6 +32,7 @@ exports.create = function(req, res) {
 exports.createArray = function(req, res) {
   var errs=[];
   var acceleros=[];
+  console.log("acc create:"+JSON.stringify(req.body));
   for(var i=0;i<req.body.length;i++){
     Accelerometer.create(req.body[i], function(err, accelerometer) {
       console.log("acc create:"+JSON.stringify(req.body));

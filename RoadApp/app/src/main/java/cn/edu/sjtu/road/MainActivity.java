@@ -26,6 +26,8 @@ import android.widget.TextView;
 
 import org.json.JSONArray;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
@@ -70,21 +72,25 @@ public class MainActivity extends Activity
 
     private ExecutorService threadPool;
 
-    protected void sendAccelerometerArray(ArrayList<AccelerometerModel> accelerometerArray) {
+    protected void sendAccelerometerArray(final ArrayList<AccelerometerModel> accelerometerArray) {
+        Log.v("sendAccelerometer", ""+accelerometerArray.size());
+        if(accelerometerArray.size()==0)
+            return;
 //        for(int i=0;i<accelerometerArray.size();i++){
 //            sendAccelerometer(accelerometerArray.get(i));
 //        }
+
         class SendAccelerometerArrayThread extends Thread {
             ArrayList<AccelerometerModel> accelerometerArrayData;
 
             public SendAccelerometerArrayThread(ArrayList<AccelerometerModel> accelerometerArrayData) {
-                this.accelerometerArrayData = accelerometerArrayData;
+                this.accelerometerArrayData =(ArrayList<AccelerometerModel>) accelerometerArrayData.clone();
             }
 
             @Override
             public void run() {
                 try {
-                    JSONArray jsonArray=new JSONArray();
+                    JSONArray jsonArray = new JSONArray();
                     for (int i = 0; i < accelerometerArrayData.size(); i++) {
                         Log.v("sendAccelerometer", accelerometerArrayData.get(i).toJson().toString());
                         jsonArray.put(accelerometerArrayData.get(i).toJson());
@@ -99,8 +105,25 @@ public class MainActivity extends Activity
                     connection.setRequestProperty("Content-Length", String.valueOf(entity.length));
                     OutputStream os = connection.getOutputStream();
                     os.write(entity);
-                    Log.v("sendAccelerometer", "" + connection.getResponseCode());
-                    Log.v("sendAccelerometer", "" + connection.getResponseMessage());
+                    int responseCode = connection.getResponseCode();
+                    Log.v("sendAccelerometer", "" + responseCode);
+                    if (responseCode == 201) {
+                        url = new URL("http://" + mServer + "/api/holes/test/" + mDevice + "/" + accelerometerArrayData.get(0).time + "/" + accelerometerArrayData.size());
+                        connection = (HttpURLConnection) url.openConnection();
+                        connection.setRequestMethod("GET");
+                        responseCode = connection.getResponseCode();
+                        BufferedReader in = new BufferedReader(                                    new InputStreamReader(connection.getInputStream()));
+                        String inputLine;
+                        StringBuffer response = new StringBuffer();
+                        while ((inputLine = in.readLine()) != null) {
+                            response.append(inputLine);
+                        }
+                        in.close();
+                        String responseStr = response.toString();
+                        TextView tv = (TextView) findViewById(R.id.home_screen_last_hole);
+                        if (tv != null)
+                            tv.setText(responseStr);
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -119,7 +142,6 @@ public class MainActivity extends Activity
             @Override
             public void run() {
                 try {
-                    // TODO upload data
                     Log.v("sendAccelerometer", accelerometerData.toJson().toString());
                     byte[] entity = accelerometerData.toJson().toString().getBytes();
                     URL url = new URL("http://" + mServer + "/api/accelerometers");
@@ -197,14 +219,21 @@ public class MainActivity extends Activity
 
                 TextView tv = (TextView) findViewById(R.id.home_screen_text_view);
                 try {
-                    tv.setText(data.toJson().toString());
+                    if(tv!=null)
+                        tv.setText(data.toJson().toString());
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                sendAccelerometer(data);
+                //sendAccelerometer(data);
+
                 while (AccelerometerModelArrayList.size() >= mPackageTotal)
                     AccelerometerModelArrayList.remove(0);
                 AccelerometerModelArrayList.add(data);
+                try {
+                    Log.v("sensor", data.toJson().toString());
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
                 if (data.x != 0||data.y!=0||data.z!=0) {//TODO filter
                     isPassingHole = true;
                 }
@@ -249,12 +278,34 @@ public class MainActivity extends Activity
         }
     }
 
+    public void onButtonRefreshHomePressed(View view){
+        showSettings();
+    }
+    public void onButtonSetPressed(View view){
+        onSettingsChanged();
+    }
     @Override
     public void onSettingsChanged() {
-        TextView tv=(TextView) findViewById(R.id.home_screen_settings);
-        tv.setText("Settings Changed");
-        EditText et=(EditText)findViewById(R.id.settings_device_id_value);
+        EditText et;
+        et=(EditText)findViewById(R.id.settings_device_id_value);
         mDevice= Integer.parseInt(et.getText().toString());
+        et=(EditText)findViewById(R.id.settings_device_id_value);
+        mServer= et.getText().toString();
+        et=(EditText)findViewById(R.id.settings_device_id_value);
+        mLongitudinal= Double.parseDouble(et.getText().toString());
+        et=(EditText)findViewById(R.id.settings_device_id_value);
+        mTransverse = Double.parseDouble(et.getText().toString());
+    }
+    public void showSettings() {
+        TextView tv = (TextView) findViewById(R.id.home_screen_settings);
+        String settingsString = "";
+        settingsString += "mDevice:" + mDevice + "\n";
+        settingsString += "mLongitudinal:" + mLongitudinal + "\n";
+        settingsString += "mTransverse:" + mTransverse + "\n";
+        settingsString += "mLongitude:" + mLongitude + "\n";
+        settingsString += "mLatitude:" + mLatitude + "\n";
+        settingsString += "mServer:" + mServer + "\n";
+        tv.setText(settingsString);
     }
 
     public void onSectionAttached(int number) {
@@ -269,6 +320,7 @@ public class MainActivity extends Activity
                 mTitle = getString(R.string.title_section3);
                 break;
         }
+
     }
 
     public void restoreActionBar() {

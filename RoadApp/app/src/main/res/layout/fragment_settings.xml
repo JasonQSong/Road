@@ -106,6 +106,19 @@
                 android:id="@+id/settings_unit_meter_1"
                 android:layout_column="2" />
         </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/set"
+                android:id="@+id/buttonSet"
+                android:layout_column="0"
+                android:onClick="onButtonSetPressed" />
+        </TableRow>
     </TableLayout>
 
 </FrameLayout>
