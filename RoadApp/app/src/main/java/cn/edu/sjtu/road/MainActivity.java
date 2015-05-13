@@ -24,6 +24,8 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import org.json.JSONArray;
+
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
@@ -68,10 +70,43 @@ public class MainActivity extends Activity
 
     private ExecutorService threadPool;
 
-    protected void sendAccelerometerArray(ArrayList<AccelerometerModel> accelerometerArray)     {
-        for(int i=0;i<accelerometerArray.size();i++){
-            sendAccelerometer(accelerometerArray.get(i));
+    protected void sendAccelerometerArray(ArrayList<AccelerometerModel> accelerometerArray) {
+//        for(int i=0;i<accelerometerArray.size();i++){
+//            sendAccelerometer(accelerometerArray.get(i));
+//        }
+        class SendAccelerometerArrayThread extends Thread {
+            ArrayList<AccelerometerModel> accelerometerArrayData;
+
+            public SendAccelerometerArrayThread(ArrayList<AccelerometerModel> accelerometerArrayData) {
+                this.accelerometerArrayData = accelerometerArrayData;
+            }
+
+            @Override
+            public void run() {
+                try {
+                    JSONArray jsonArray=new JSONArray();
+                    for (int i = 0; i < accelerometerArrayData.size(); i++) {
+                        Log.v("sendAccelerometer", accelerometerArrayData.get(i).toJson().toString());
+                        jsonArray.put(accelerometerArrayData.get(i).toJson());
+                    }
+                    byte[] entity = jsonArray.toString().getBytes();
+                    URL url = new URL("http://" + mServer + "/api/accelerometers/createArray");
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setDoOutput(true);
+                    connection.setDoInput(true);
+                    connection.setRequestMethod("POST");
+                    connection.setRequestProperty("Content-Type", "application/json");
+                    connection.setRequestProperty("Content-Length", String.valueOf(entity.length));
+                    OutputStream os = connection.getOutputStream();
+                    os.write(entity);
+                    Log.v("sendAccelerometer", "" + connection.getResponseCode());
+                    Log.v("sendAccelerometer", "" + connection.getResponseMessage());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         }
+        threadPool.execute(new SendAccelerometerArrayThread(accelerometerArray));
     }
     protected void sendAccelerometer(AccelerometerModel accelerometerData) {
         class SendAccelerometerThread extends Thread {
@@ -170,13 +205,14 @@ public class MainActivity extends Activity
                 while (AccelerometerModelArrayList.size() >= mPackageTotal)
                     AccelerometerModelArrayList.remove(0);
                 AccelerometerModelArrayList.add(data);
-                if (data.x > 0.5) {//TODO filter
+                if (data.x != 0||data.y!=0||data.z!=0) {//TODO filter
                     isPassingHole = true;
                 }
                 if (isPassingHole) {
                     passingHoleCount++;
                     if (passingHoleCount >= mPackageCollect) {
                         sendAccelerometerArray(AccelerometerModelArrayList);
+                        AccelerometerModelArrayList.clear();
                         isPassingHole = false;
                         passingHoleCount = 0;
                     }
@@ -215,7 +251,10 @@ public class MainActivity extends Activity
 
     @Override
     public void onSettingsChanged() {
-
+        TextView tv=(TextView) findViewById(R.id.home_screen_settings);
+        tv.setText("Settings Changed");
+        EditText et=(EditText)findViewById(R.id.settings_device_id_value);
+        mDevice= Integer.parseInt(et.getText().toString());
     }
 
     public void onSectionAttached(int number) {

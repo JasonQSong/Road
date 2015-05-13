@@ -1,7 +1,7 @@
 function ret=main(varargin)
 p=inputParser;
 defaultInputFilename='input.txt';
-defaultInputFilename='..\Wenzhuo\data\2015-1-22\6.txt';
+defaultInputFilename='..\Wenzhuo\data\2015-1-22\1.txt';
 addOptional(p,'i',defaultInputFilename);
 defaultOutputFilename='output.txt';
 addOptional(p,'o',defaultOutputFilename);
@@ -16,54 +16,50 @@ ret=0;
 FRQ=5;
 THRESHOLD=1;
 inputFile=fopen(inputFilename);
-C=textscan(inputFile,'%s%f%f%f');  %读取数据
+outputFile=fopen(outputFilename,'w');
+C=textscan(inputFile,'%s%f%f%f');
 t=C{1};
 x=C{2};
 y=C{3};
 z=C{4};
-% [t,x,y,z,a1,a2,a3,a4,a5,a6,a7,a8,a9]=textread('1222.txt','%s%f%f%f%f%f%f%f%f%f%f%f%f');
-z=z-mean(z);
-%figure;
-plot(z);
-len=size(z);
-varz=[];
-for i=1:FRQ:len %计算数据的方差
-    if(i+FRQ>len)
-        varz=[varz std(z(i:len))];
+zBase=z-mean(z);
+dataLength=length(zBase);
+zVar=zeros(1,ceil(dataLength/FRQ));
+for i=1:ceil(dataLength/FRQ) %compute stdandard variance
+    if(i+FRQ*i>dataLength)
+        zVar(i)= std(zBase(1+FRQ*(i-1):dataLength));
     else
-        varz=[varz std(z(i:i+FRQ))];
+        zVar(i)= std(zBase(1+FRQ*(i-1):1+FRQ*i));
     end
 end
-%figure;
 idx=[];
-avg=mean(varz)
-for j=1:length(varz)%如果方差大于平均方差 则记录为振动点
-    if(varz(j)>(avg+THRESHOLD))
+avg=mean(zVar);
+for j=1:length(zVar)%如果方差大于平均方差 则记录为振动点
+    if(zVar(j)>(avg+THRESHOLD))
         idx=[idx j];
     end
 end
-idx
 start=1;
 final=1;
-tmp=[];
-ss=1;
-selectdata=[];
-for i=3:length(idx)%找出波形进行分析
+waveIdx=[];
+waveNum=1;
+waveData=[];
+for i=3:length(idx)%find out wave
     if(idx(i)-idx(i-1)<5)
-        tmp=[tmp idx(i-1)];
+        waveIdx=[waveIdx idx(i-1)];
     elseif(idx(i)-idx(i-1)>=5 && idx(i-1)-idx(i-2)<5)
-        tmp=[tmp idx(i-1)]
-        start=tmp(1);
-        final=tmp(length(tmp));
-        tmp=[];
-        selectdata=z(FRQ*(start-1)+1:FRQ*final);
-        ss=ss+1;
-        if(ss==2)%确定第几个波形进行后续处理，此处算则了第二个波形，即后轮的振动，因为前轮的阻尼振动会被后轮的受迫振动所覆盖掉
-            calparam(selectdata);
-            newgongshi(selectdata,20);
-            %solveout(selectdata,FRQ*(start-1)+1);
+        waveIdx=[waveIdx idx(i-1)];
+        start=waveIdx(1);
+        final=waveIdx(length(waveIdx));
+        waveIdx=[];
+        waveData=zBase(FRQ*(start-1)+1:FRQ*final);
+        if(waveNum==1)%确定第几个波形进行后续处理，此处算则了第二个波形，即后轮的振动，因为前轮的阻尼振动会被后轮的受迫振动所覆盖掉
+            [~,~,~]=calparam(waveData);
+            [diameter,depth]=newgongshi(waveData,20);
+            fprintf(outputFile,'%f %f',diameter,depth);
         end
+        waveNum=waveNum+1;
     else
-        tmp=idx(i-1);
+        waveIdx=idx(i-1);
     end
 end
