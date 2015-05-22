@@ -63,4 +63,3 @@ for i=3:length(idx)%find out wave
         waveIdx=idx(i-1);
     end
 end
-

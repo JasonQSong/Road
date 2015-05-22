@@ -1,0 +1,2 @@
+input:.\data\1.txt
+output:.\data\1-1432257451634-20.out

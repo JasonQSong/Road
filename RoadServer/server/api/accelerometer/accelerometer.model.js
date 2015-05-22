@@ -7,7 +7,7 @@ var AccelerometerSchema = new Schema({
   device: Number,
   longitudinal: Number,
   transverse: Number,
-  time: Number,
+  time: {type:Number,unique:true},
   longitude: Number,
   latitude: Number,
   x: Number,

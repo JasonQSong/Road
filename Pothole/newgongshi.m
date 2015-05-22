@@ -8,7 +8,7 @@ t=0:1/N:1/N*(length(waveData)-1);
 st=t*v*1000/3600;
 z=zeros(1,length(waveData));
 smoothWaveData=smooth(waveData,10);
-smoothWaveDataT=smoothWaveData'
+smoothWaveDataT=smooth(waveData,10)';
 %x=medfilt1(x,10);
 xx=zeros(1,length(waveData));
 xxx=zeros(1,length(waveData));
@@ -32,8 +32,7 @@ exx=exp(-1*p*pi*t/delta);
 f1=pi/(p*delta)*exx;
 all=f1.*re;
 dif=[0,diff(all)];
-sumdif=sum(dif);
+depth=max(dif);
 diameter=st(length(st));
-depth=sum(all);
 
 

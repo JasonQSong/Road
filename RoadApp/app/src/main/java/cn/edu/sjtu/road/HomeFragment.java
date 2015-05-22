@@ -79,6 +79,7 @@ public class HomeFragment extends Fragment {
         super.onAttach(activity);
         try {
             mListener = (HomeCallbacks) activity;
+            ((MainActivity) activity).onSectionAttached(1);
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString()
                     + " must implement OnFragmentInteractionListener");

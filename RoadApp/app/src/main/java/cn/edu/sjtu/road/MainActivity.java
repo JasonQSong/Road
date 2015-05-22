@@ -10,6 +10,8 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -25,6 +27,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -33,7 +37,8 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -64,15 +69,17 @@ public class MainActivity extends Activity
     private double mLongitude;// = Double.parseDouble(getString(R.string.default_longitude));
     private double mLatitude;// = Double.parseDouble(getString(R.string.default_latitude));
     private String mServer;// = getString(R.string.settings_server_value);
-    private ArrayList<AccelerometerModel> AccelerometerModelArrayList;// = new ArrayList<AccelerometerModel>();
+    private LinkedList<AccelerometerModel> AccelerometerModelLinkedList;// = new LinkedList<AccelerometerModel>();
     private int mPackageTotal;// = Integer.parseInt(getString(R.string.sensor_package_total));
     private int mPackageCollect;// = Integer.parseInt(getString(R.string.sensor_package_collect));
     private boolean isPassingHole;//=false;
     private int passingHoleCount;// = 0;
 
+    private JSONObject runtimeData;
+
     private ExecutorService threadPool;
 
-    protected void sendAccelerometerArray(final ArrayList<AccelerometerModel> accelerometerArray) {
+    protected void sendAccelerometerArray(final LinkedList<AccelerometerModel> accelerometerArray) {
         Log.v("sendAccelerometer", ""+accelerometerArray.size());
         if(accelerometerArray.size()==0)
             return;
@@ -81,10 +88,10 @@ public class MainActivity extends Activity
 //        }
 
         class SendAccelerometerArrayThread extends Thread {
-            ArrayList<AccelerometerModel> accelerometerArrayData;
+            LinkedList<AccelerometerModel> accelerometerArrayData;
 
-            public SendAccelerometerArrayThread(ArrayList<AccelerometerModel> accelerometerArrayData) {
-                this.accelerometerArrayData =(ArrayList<AccelerometerModel>) accelerometerArrayData.clone();
+            public SendAccelerometerArrayThread(LinkedList<AccelerometerModel> accelerometerArrayData) {
+                this.accelerometerArrayData =(LinkedList<AccelerometerModel>) accelerometerArrayData.clone();
             }
 
             @Override
@@ -174,6 +181,26 @@ public class MainActivity extends Activity
         }
         threadPool.execute(new SendAccelerometerThread(accelerometerData));
     }
+    protected double calcAvg(List<AccelerometerModel> accelerometerModelLinkedList){
+        double sum=0;
+        for(int i=0;i<accelerometerModelLinkedList.size();i++){
+            sum+=accelerometerModelLinkedList.get(i).z;
+        }
+        return sum/accelerometerModelLinkedList.size();
+    }
+
+    protected double calcVar(List<AccelerometerModel> accelerometerModelLinkedList){
+        double sum=0;
+        for(int i=0;i<accelerometerModelLinkedList.size();i++){
+            sum+=accelerometerModelLinkedList.get(i).z;
+        }
+        double avg=sum/accelerometerModelLinkedList.size();
+        double sumvar=0;
+        for(int i=0;i<accelerometerModelLinkedList.size();i++){
+            sumvar+=accelerometerModelLinkedList.get(i).z-avg;
+        }
+        return sumvar/accelerometerModelLinkedList.size();
+    }
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -195,17 +222,30 @@ public class MainActivity extends Activity
         mLongitude = Double.parseDouble(getString(R.string.default_longitude));
         mLatitude = Double.parseDouble(getString(R.string.default_latitude));
         mServer = getString(R.string.settings_server_value);
-        AccelerometerModelArrayList = new ArrayList<AccelerometerModel>();
+        AccelerometerModelLinkedList = new LinkedList<AccelerometerModel>();
         mPackageTotal = Integer.parseInt(getString(R.string.sensor_package_total));
         mPackageCollect = Integer.parseInt(getString(R.string.sensor_package_collect));
         isPassingHole = false;
         passingHoleCount = 0;
+        try {
+            runtimeData = new JSONObject();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
         //sensor
         SensorManager sm = (SensorManager) this.getSystemService(SENSOR_SERVICE);
-        Sensor sensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        final Sensor accelerometerSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         sm.registerListener(new SensorEventListener() {
             public void onSensorChanged(SensorEvent event) {
+
+                LocationManager locationManager=(LocationManager)getSystemService(Context.LOCATION_SERVICE) ;
+                Location location=locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+                if(location!=null) {
+                    mLongitude = location.getLongitude();
+                    mLatitude = location.getLatitude();
+                }
                 AccelerometerModel data = new AccelerometerModel();
                 data.device = mDevice;
                 data.longitudinal = mLongitudinal;
@@ -224,15 +264,23 @@ public class MainActivity extends Activity
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+
                 //sendAccelerometer(data);
 
-                while (AccelerometerModelArrayList.size() >= mPackageTotal)
-                    AccelerometerModelArrayList.remove(0);
-                AccelerometerModelArrayList.add(data);
+                while (AccelerometerModelLinkedList.size() >= mPackageTotal)
+                    AccelerometerModelLinkedList.remove(0);
+                AccelerometerModelLinkedList.add(data);
                 try {
                     Log.v("sensor", data.toJson().toString());
                 } catch (Exception e){
                     e.printStackTrace();
+                }
+                int start=AccelerometerModelLinkedList.size()-5;
+                start=start<0?0:start;
+                double lastVar=calcVar(AccelerometerModelLinkedList.subList(start,AccelerometerModelLinkedList.size()));
+                double allVar=calcVar(AccelerometerModelLinkedList);
+                if(lastVar> allVar&&AccelerometerModelLinkedList.size()>10)           {
+                    isPassingHole = true;
                 }
                 if (data.x != 0||data.y!=0||data.z!=0) {//TODO filter
                     isPassingHole = true;
@@ -240,17 +288,26 @@ public class MainActivity extends Activity
                 if (isPassingHole) {
                     passingHoleCount++;
                     if (passingHoleCount >= mPackageCollect) {
-                        sendAccelerometerArray(AccelerometerModelArrayList);
-                        AccelerometerModelArrayList.clear();
+                        sendAccelerometerArray(AccelerometerModelLinkedList);
                         isPassingHole = false;
                         passingHoleCount = 0;
                     }
+                }
+
+                try {
+                runtimeData.put("isPassingHole",isPassingHole);
+                    runtimeData.put("progress",AccelerometerModelLinkedList.size());
+                tv = (TextView) findViewById(R.id.home_screen_runtime);
+                    if(tv!=null)
+                        tv.setText(runtimeData.toString());
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
 
             public void onAccuracyChanged(Sensor sensor, int accuracy) {
             }
-        }, sensor, SensorManager.SENSOR_DELAY_FASTEST);
+        }, accelerometerSensor, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
     @Override
@@ -265,7 +322,7 @@ public class MainActivity extends Activity
                         .commit();
                 break;
             case 1:
-                mSettingsFragment = SettingsFragment.newInstance("", "");
+                mSettingsFragment = SettingsFragment.newInstance();
                 fragmentManager.beginTransaction()
                         .replace(R.id.container, mSettingsFragment)
                         .commit();

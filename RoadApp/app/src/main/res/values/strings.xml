@@ -21,15 +21,15 @@
     <string name="settings_device_id_value">1</string>
     <string name="settings_device_id_label">Device ID</string>
     <string name="set">Set</string>
-    <string name="refresh">Refresh</string>
+    <string name="refresh">Show Settings</string>
 
 
     <string name="default_longitude">10.0</string>
     <string name="default_latitude">10.0</string>
 
 
-    <string name="sensor_package_collect">50</string>
-    <string name="sensor_package_total">100</string>
+    <string name="sensor_package_collect">10</string>
+    <string name="sensor_package_total">20</string>
     <string name="hello_blank_fragment">hello</string>
 
 

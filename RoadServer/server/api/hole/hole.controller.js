@@ -75,12 +75,11 @@ exports.test=function(req, res) {
       var recordFilename='.\\data\\'+req.params.device+'-'+req.params.time+'-'+req.params.limit;
       var inputFilename=recordFilename+'.in';
       var outputFilename=recordFilename+'.out';
-      //writeFile(inputFilename);
       fs.writeFile(inputFilename, dataStr, function(err){  
         if(err) { return handleError(res, err); }
-
+        inputFilename='.\\data\\1.txt';
         //inputFilename='.\\..\\Wenzhuo\\data\\2015-1-22\\1.txt';
-        process.exec('..\\Pothole\\pothole.exe'+' i '+inputFilename+' o ' +outputFilename,
+        process.exec('..\\Pothole\\pothole.exe'+' i '+inputFilename+' o ' +outputFilename + '> potholelog.txt',
           function(err){
             if(err) { return handleError(res, err); }
             fs.readFile(outputFilename,'utf-8',function(err,data){
