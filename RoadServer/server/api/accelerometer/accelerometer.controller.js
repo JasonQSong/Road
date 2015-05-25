@@ -34,7 +34,7 @@ exports.createArray = function(req, res) {
   var acceleros=[];
   for(var i=0;i<req.body.length;i++){
     Accelerometer.create(req.body[i], function(err, accelerometer) {
-      if(err) { errs.push(err); }
+      if(err) {errs.push(err); }
       else{ acceleros.push(accelerometer); }
     });
   }
@@ -72,5 +72,6 @@ exports.destroy = function(req, res) {
 };
 
 function handleError(res, err) {
+  console.log("err:"+err)
   return res.send(500, err);
 }

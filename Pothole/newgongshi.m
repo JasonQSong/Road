@@ -1,4 +1,4 @@
-function [diameter,depth] = newgongshi(waveData,v)
+function [depth] = newgongshi(waveData,v)
 %syms p delta t ;  %delta是衰弱幅度 qt是对输入数据进行变换之后的数据
 %w=2*pi/t by jason
 p=1/0.63*(2*pi);
@@ -31,8 +31,7 @@ end
 exx=exp(-1*p*pi*t/delta);
 f1=pi/(p*delta)*exx;
 all=f1.*re;
-dif=[0,diff(all)];
-depth=max(dif);
-diameter=st(length(st));
+%dif=[0,diff(all)];
+depth=max(all)-min(all);
 
 

@@ -1,2 +1,2 @@
-input:.\data\1.txt
-output:.\data\1-1432257451634-20.out
+input:.\data\7feb16c3e9406d80-1432829745072-500.in
+output:.\data\7feb16c3e9406d80-1432829745072-500.out

@@ -6,7 +6,7 @@ var controller = require('./hole.controller');
 var router = express.Router();
 
 router.get('/', controller.index);
-router.get('/test/:device/:time/:limit', controller.test);
+router.get('/test/:device/:timeUTC/:limit', controller.test);
 router.get('/:id', controller.show);
 router.post('/', controller.create);
 router.put('/:id', controller.update);

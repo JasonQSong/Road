@@ -9,6 +9,13 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string name="action_example">Example action</string>
+    <string name="label_home_time">Time:</string>
+    <string name="label_home_accelerometer_x">Accelerometer X:</string>
+    <string name="label_home_accelerometer_y">Accelerometer Y:</string>
+    <string name="label_home_accelerometer_z">Accelerometer Z:</string>
+    <string name="label_home_longitude">Longitude:</string>
+    <string name="label_home_latitude">Latitude:</string>
+    <string name="label_home_device">Device:</string>
 
     <string name="action_settings">Settings</string>
     <string name="settings_server_label">Server</string>
@@ -24,13 +31,17 @@
     <string name="refresh">Show Settings</string>
 
 
-    <string name="default_longitude">10.0</string>
-    <string name="default_latitude">10.0</string>
+    <string name="default_longitude">0</string>
+    <string name="default_latitude">0</string>
 
 
-    <string name="sensor_package_collect">10</string>
-    <string name="sensor_package_total">20</string>
+    <string name="sensor_package_collect">200</string>
+    <string name="sensor_package_total">500</string>
     <string name="hello_blank_fragment">hello</string>
+    <string name="label_home_server">Server:</string>
+    <string name="label_home_longitudinal">Longitudinal</string>
+    <string name="label_home_transverse">Transverse:</string>
+    <string name="label_home_last_depth">Last Depth:</string>
 
 
 </resources>

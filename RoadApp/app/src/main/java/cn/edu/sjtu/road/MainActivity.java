@@ -11,9 +11,12 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
+import android.location.LocationProvider;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Message;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -36,13 +39,42 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 
+
+import com.baidu.mapapi.SDKInitializer;
+import com.baidu.mapapi.map.BaiduMap;
+import com.baidu.mapapi.map.MapStatus;
+import com.baidu.mapapi.map.MapStatusUpdate;
+import com.baidu.mapapi.map.MapStatusUpdateFactory;
+import com.baidu.mapapi.map.MapView;
+import com.baidu.location.BDLocation;
+import com.baidu.location.BDLocationListener;
+import com.baidu.location.LocationClient;
+import com.baidu.location.LocationClientOption;
+import com.baidu.location.BDNotifyListener;//假如用到位置提醒功能，需要import该类
+//如果使用地理围栏功能，需要import如下类
+import com.baidu.location.BDGeofence;
+import com.baidu.location.BDLocationStatusCodes;
+import com.baidu.location.GeofenceClient;
+import com.baidu.location.GeofenceClient.OnAddBDGeofencesResultListener;
+import com.baidu.location.GeofenceClient.OnGeofenceTriggerListener;
+import com.baidu.location.GeofenceClient.OnRemoveBDGeofencesResultListener;
+import com.baidu.mapapi.map.MyLocationData;
+import com.baidu.mapapi.model.LatLng;
+
+
+import android.provider.Settings.Secure;
 
 public class MainActivity extends Activity
         implements NavigationDrawerFragment.NavigationDrawerCallbacks,
@@ -63,35 +95,64 @@ public class MainActivity extends Activity
     private HomeFragment mHomeFragment;
     private SettingsFragment mSettingsFragment;
 
-    private int mDevice;// = Integer.parseInt(getString(R.string.settings_device_id_value));
+    private String mDevice;// = Integer.parseInt(getString(R.string.settings_device_id_value));
     private double mLongitudinal;// = Double.parseDouble(getString(R.string.settings_longitudinal_wheelbase_value));
     private double mTransverse;// = Double.parseDouble(getString(R.string.settings_transverse_wheelbase_value));
     private double mLongitude;// = Double.parseDouble(getString(R.string.default_longitude));
     private double mLatitude;// = Double.parseDouble(getString(R.string.default_latitude));
+    private int mLocationType;
     private String mServer;// = getString(R.string.settings_server_value);
     private LinkedList<AccelerometerModel> AccelerometerModelLinkedList;// = new LinkedList<AccelerometerModel>();
     private int mPackageTotal;// = Integer.parseInt(getString(R.string.sensor_package_total));
     private int mPackageCollect;// = Integer.parseInt(getString(R.string.sensor_package_collect));
     private boolean isPassingHole;//=false;
     private int passingHoleCount;// = 0;
+    private double mVelocity;
+    private double mEntryRatioX;
+    private double mEntryRatioY;
 
     private JSONObject runtimeData;
 
     private ExecutorService threadPool;
 
-    protected void sendAccelerometerArray(final LinkedList<AccelerometerModel> accelerometerArray) {
-        Log.v("sendAccelerometer", ""+accelerometerArray.size());
-        if(accelerometerArray.size()==0)
+
+    protected void sendAccelerometerArray(final LinkedList<AccelerometerModel> accelerometerArrayData, final ICallback iCallback) {
+        Log.v("sendAccelerometer", "size:" + accelerometerArrayData.size());
+        if (accelerometerArrayData.size() == 0) {
             return;
-//        for(int i=0;i<accelerometerArray.size();i++){
-//            sendAccelerometer(accelerometerArray.get(i));
-//        }
+        }
+        try {
+            JSONArray jsonArray = new JSONArray();
+            for (int i = 0; i < accelerometerArrayData.size(); i++) {
+                if (accelerometerArrayData.get(i).sent == false) {
+                    Log.v("sendAccelerometer", accelerometerArrayData.get(i).toJson().toString());
+                    jsonArray.put(accelerometerArrayData.get(i).toJson());
+                    accelerometerArrayData.get(i).sent = true;
+                }
+            }
+            PostThread postThread = new PostThread();
+            postThread.urlStr = "http://" + mServer + "/api/accelerometers/createArray";
+            postThread.contentType = "application/json";
+            postThread.content = jsonArray.toString();
+            postThread.iCallback = new ICallback() {
+                @Override
+                public void callback(Object object) {
+                    Log.v("SendAccelerometer", object.toString());
+                    if (iCallback != null) {
+                        iCallback.callback(object);
+                    }
+                }
+            };
+            PostThread.threadPool.execute(postThread);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         class SendAccelerometerArrayThread extends Thread {
             LinkedList<AccelerometerModel> accelerometerArrayData;
 
             public SendAccelerometerArrayThread(LinkedList<AccelerometerModel> accelerometerArrayData) {
-                this.accelerometerArrayData =(LinkedList<AccelerometerModel>) accelerometerArrayData.clone();
+                this.accelerometerArrayData = (LinkedList<AccelerometerModel>) accelerometerArrayData.clone();
             }
 
             @Override
@@ -115,11 +176,11 @@ public class MainActivity extends Activity
                     int responseCode = connection.getResponseCode();
                     Log.v("sendAccelerometer", "" + responseCode);
                     if (responseCode == 201) {
-                        url = new URL("http://" + mServer + "/api/holes/test/" + mDevice + "/" + accelerometerArrayData.get(0).time + "/" + accelerometerArrayData.size());
+                        url = new URL("http://" + mServer + "/api/holes/test/" + mDevice + "/" + accelerometerArrayData.get(0).timeUTC + "/" + accelerometerArrayData.size());
                         connection = (HttpURLConnection) url.openConnection();
                         connection.setRequestMethod("GET");
                         responseCode = connection.getResponseCode();
-                        BufferedReader in = new BufferedReader(                                    new InputStreamReader(connection.getInputStream()));
+                        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                         String inputLine;
                         StringBuffer response = new StringBuffer();
                         while ((inputLine = in.readLine()) != null) {
@@ -136,74 +197,109 @@ public class MainActivity extends Activity
                 }
             }
         }
-        threadPool.execute(new SendAccelerometerArrayThread(accelerometerArray));
     }
-    protected void sendAccelerometer(AccelerometerModel accelerometerData) {
-        class SendAccelerometerThread extends Thread {
-            AccelerometerModel accelerometerData;
 
-            public SendAccelerometerThread(AccelerometerModel accelerometerData) {
-                this.accelerometerData = accelerometerData;
+    protected void sendAccelerometer(AccelerometerModel accelerometerData, final ICallback iCallback) {
+        if (accelerometerData.sent == true) {
+            if (iCallback != null) {
+                iCallback.callback(new JSONObject());
+            }
+            return;
+        }
+        try {
+            accelerometerData.sent = true;
+            Log.v("SendAccelerometer", accelerometerData.toJson().toString());
+            PostThread postThread = new PostThread();
+            postThread.urlStr = "http://" + mServer + "/api/accelerometers";
+            postThread.contentType = "application/json";
+            postThread.content = accelerometerData.toJson().toString();
+            postThread.iCallback = new ICallback() {
+                @Override
+                public void callback(Object object) {
+                    Log.v("SendAccelerometer", object.toString());
+                    if (iCallback != null) {
+                        iCallback.callback(object);
+                    }
+                }
+            };
+            PostThread.threadPool.execute(postThread);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    protected double calcAvg(List<AccelerometerModel> accelerometerModelLinkedList) {
+        double sum = 0;
+        for (int i = 0; i < accelerometerModelLinkedList.size(); i++) {
+            sum += accelerometerModelLinkedList.get(i).z;
+        }
+        return sum / accelerometerModelLinkedList.size();
+    }
+
+    protected double calcVar(List<AccelerometerModel> accelerometerModelLinkedList) {
+        double avg = calcAvg(accelerometerModelLinkedList);
+        double sumVar = 0;
+        for (int i = 0; i < accelerometerModelLinkedList.size(); i++) {
+            double dev = accelerometerModelLinkedList.get(i).z - avg;
+            sumVar += dev * dev;
+        }
+        return sumVar / accelerometerModelLinkedList.size();
+    }
+
+    public LocationManager mLocationManager = null;
+    public LocationClient mBDLocationClient = null;
+
+    protected void onCreateSetupGoogleLocationService() {
+        mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                if (location != null) {
+                    mLongitude = location.getLongitude();
+                    mLatitude = location.getLatitude();
+                    Log.v("AndroidLocation", "LocationChanged" + ",longitude:" + mLongitude + ",latitude" + mLatitude);
+                }
             }
 
             @Override
-            public void run() {
-                try {
-                    Log.v("sendAccelerometer", accelerometerData.toJson().toString());
-                    byte[] entity = accelerometerData.toJson().toString().getBytes();
-                    URL url = new URL("http://" + mServer + "/api/accelerometers");
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setDoOutput(true);
-                    connection.setDoInput(true);
-                    connection.setRequestMethod("POST");
-                    connection.setRequestProperty("Content-Type", "application/json");
-                    connection.setRequestProperty("Content-Length", String.valueOf(entity.length));
-                    OutputStream os = connection.getOutputStream();
-                    os.write(entity);
-                    Log.v("sendAccelerometer", "" + connection.getResponseCode());
-                    Log.v("sendAccelerometer", "" + connection.getResponseMessage());
-            /*
-            String model = "";
-            model += "device=" + data.device + "\n";
-            model += "&longitudinal=" + data.longitudinal + "\n";
-            model += "&transverse=" + data.transverse + "\n";
-            model += "&time=" + data.time + "\n";
-            model += "&longitude=" + data.longitude + "\n";
-            model += "&latitude=" + data.latitude + "\n";
-            model += "&x=" + data.x + "\n";
-            model += "&y=" + data.y + "\n";
-            model += "&z=" + data.z + "\n";
-            */
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+                Log.v("AndroidLocation", "LocationStatusChanged" + ",provider:" + provider + ",status:" + status);
             }
-        }
-        threadPool.execute(new SendAccelerometerThread(accelerometerData));
-    }
-    protected double calcAvg(List<AccelerometerModel> accelerometerModelLinkedList){
-        double sum=0;
-        for(int i=0;i<accelerometerModelLinkedList.size();i++){
-            sum+=accelerometerModelLinkedList.get(i).z;
-        }
-        return sum/accelerometerModelLinkedList.size();
+
+            @Override
+            public void onProviderEnabled(String provider) {
+                Log.v("AndroidLocation", "ProviderEnabled" + ",provider:" + provider);
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+                Log.v("AndroidLocation", "ProviderDisabled" + ",provider:" + provider);
+            }
+        });
     }
 
-    protected double calcVar(List<AccelerometerModel> accelerometerModelLinkedList){
-        double sum=0;
-        for(int i=0;i<accelerometerModelLinkedList.size();i++){
-            sum+=accelerometerModelLinkedList.get(i).z;
-        }
-        double avg=sum/accelerometerModelLinkedList.size();
-        double sumvar=0;
-        for(int i=0;i<accelerometerModelLinkedList.size();i++){
-            sumvar+=accelerometerModelLinkedList.get(i).z-avg;
-        }
-        return sumvar/accelerometerModelLinkedList.size();
+    protected void onCreateSetupBaiduLocationService() {
+        mBDLocationClient = new LocationClient(getApplicationContext());     //声明LocationClient类
+        LocationClientOption option = new LocationClientOption();
+        option.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);//设置定位模式
+        //option.setCoorType("gcj02");
+        option.setCoorType("bd09ll");//返回的定位结果是百度经纬度,默认值gcj02
+        option.setScanSpan(5000);//设置发起定位请求的间隔时间为5000ms
+        option.setIsNeedAddress(true);//返回的定位结果包含地址信息
+        option.setNeedDeviceDirect(true);//返回的定位结果包含手机机头的方向
+        option.setOpenGps(true);
+        mBDLocationClient.setLocOption(option);
     }
+
+    public long lastCountTime = 0;
+    public int lastCountNum = 0;
+    public long lastUpdateAccelerometerUITime=0;
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        SDKInitializer.initialize(getApplicationContext());
         setContentView(R.layout.activity_main);
+
 
         mNavigationDrawerFragment = (NavigationDrawerFragment)
                 getFragmentManager().findFragmentById(R.id.navigation_drawer);
@@ -216,7 +312,7 @@ public class MainActivity extends Activity
 
         //init
         threadPool = Executors.newCachedThreadPool();
-        mDevice = Integer.parseInt(getString(R.string.settings_device_id_value));
+        mDevice = Secure.getString(getApplicationContext().getContentResolver(), Secure.ANDROID_ID);
         mLongitudinal = Double.parseDouble(getString(R.string.settings_longitudinal_wheelbase_value));
         mTransverse = Double.parseDouble(getString(R.string.settings_transverse_wheelbase_value));
         mLongitude = Double.parseDouble(getString(R.string.default_longitude));
@@ -225,89 +321,181 @@ public class MainActivity extends Activity
         AccelerometerModelLinkedList = new LinkedList<AccelerometerModel>();
         mPackageTotal = Integer.parseInt(getString(R.string.sensor_package_total));
         mPackageCollect = Integer.parseInt(getString(R.string.sensor_package_collect));
+        mVelocity = 1;
+        mEntryRatioX = 0.5;
+        mEntryRatioY = 0.5;
         isPassingHole = false;
         passingHoleCount = 0;
         try {
             runtimeData = new JSONObject();
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        //onCreateSetupGoogleLocationService();
+        onCreateSetupBaiduLocationService();
+
+        mBDLocationClient.registerLocationListener(new BDLocationListener() {
+            @Override
+            public void onReceiveLocation(BDLocation bdLocation) {
+                if (bdLocation != null) {
+                    mLongitude = bdLocation.getLongitude();
+                    mLatitude = bdLocation.getLatitude();
+                    mLocationType = bdLocation.getLocType();
+                    if (mHomeFragment != null && mHomeFragment.isResumed() && mHomeFragment.mMapView != null) {
+                        mHomeFragment.mMapView.getMap().setMapStatus(MapStatusUpdateFactory.newMapStatus(new MapStatus.Builder()
+                                        .target(new LatLng(bdLocation.getLatitude(), bdLocation.getLongitude()))
+                                        .zoom(16)
+                                        .build()
+                        ));
+                        mHomeFragment.mMapView.getMap().setMyLocationData(new MyLocationData.Builder()
+                                        .accuracy(bdLocation.getRadius())
+                                        .direction(bdLocation.getDirection())
+                                        .latitude(bdLocation.getLatitude())
+                                        .longitude(bdLocation.getLongitude())
+                                        .build()
+                        );
+                    }
+                    if (mHomeFragment != null && mHomeFragment.isResumed()) {
+                        ((TextView) findViewById(R.id.text_view_home_latitude)).setText(Double.toString(mLatitude));
+                        ((TextView) findViewById(R.id.text_view_home_longitude)).setText(Double.toString(mLongitude));
+                    }
+                    Log.v("BDLocation", "LocationChanged" + ",locType:" + mLocationType + ",longitude:" + mLongitude + ",latitude" + mLatitude);
+                }
+            }
+        });    //注册监听函数
+        mBDLocationClient.start();
+
+
         //sensor
         SensorManager sm = (SensorManager) this.getSystemService(SENSOR_SERVICE);
         final Sensor accelerometerSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         sm.registerListener(new SensorEventListener() {
+            @Override
             public void onSensorChanged(SensorEvent event) {
-
-                LocationManager locationManager=(LocationManager)getSystemService(Context.LOCATION_SERVICE) ;
-                Location location=locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-
-                if(location!=null) {
-                    mLongitude = location.getLongitude();
-                    mLatitude = location.getLatitude();
-                }
                 AccelerometerModel data = new AccelerometerModel();
                 data.device = mDevice;
                 data.longitudinal = mLongitudinal;
                 data.transverse = mTransverse;
-                data.time = (new java.util.Date()).getTime();
+                data.timeUTC = (new Date()).getTime();
                 data.longitude = mLongitude;
                 data.latitude = mLatitude;
                 data.x = event.values[SensorManager.DATA_X];
                 data.y = event.values[SensorManager.DATA_Y];
                 data.z = event.values[SensorManager.DATA_Z];
-
-                TextView tv = (TextView) findViewById(R.id.home_screen_text_view);
                 try {
-                    if(tv!=null)
-                        tv.setText(data.toJson().toString());
+                    if (mHomeFragment != null && mHomeFragment.isResumed()&&data.timeUTC>lastUpdateAccelerometerUITime+100) {
+                        ((TextView) findViewById(R.id.home_screen_text_view)).setText(data.toJson().toString());
+                        ((TextView) findViewById(R.id.text_view_home_time)).setText(DateFormat.getDateTimeInstance().format(new Date(data.timeUTC)));
+                        ((TextView) findViewById(R.id.text_view_home_accelerometer_x)).setText(Double.toString(data.x));
+                        ((TextView) findViewById(R.id.text_view_home_accelerometer_y)).setText(Double.toString(data.y));
+                        ((TextView) findViewById(R.id.text_view_home_accelerometer_z)).setText(Double.toString(data.z));
+                        lastUpdateAccelerometerUITime=data.timeUTC;
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
 
-                //sendAccelerometer(data);
+                //sendAccelerometer(data, null);
 
                 while (AccelerometerModelLinkedList.size() >= mPackageTotal)
                     AccelerometerModelLinkedList.remove(0);
                 AccelerometerModelLinkedList.add(data);
                 try {
+                    if (data.timeUTC > lastCountTime + 1000) {
+                        Log.d("SensorCount", "lastCountTime:" + lastCountTime + ",lastCountNum:" + lastCountNum);
+                        lastCountTime = data.timeUTC - data.timeUTC % 1000;
+                        lastCountNum = 0;
+                    }
+                    lastCountNum++;
                     Log.v("sensor", data.toJson().toString());
-                } catch (Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
-                int start=AccelerometerModelLinkedList.size()-5;
-                start=start<0?0:start;
-                double lastVar=calcVar(AccelerometerModelLinkedList.subList(start,AccelerometerModelLinkedList.size()));
-                double allVar=calcVar(AccelerometerModelLinkedList);
-                if(lastVar> allVar&&AccelerometerModelLinkedList.size()>10)           {
+                int start = AccelerometerModelLinkedList.size() - 5;
+                start = start < 0 ? 0 : start;
+                double lastVar = calcVar(AccelerometerModelLinkedList.subList(start, AccelerometerModelLinkedList.size()));
+                double allVar = calcVar(AccelerometerModelLinkedList);
+                if (lastVar > allVar * 2 && lastVar > 100 && AccelerometerModelLinkedList.size() > 10 && !isPassingHole) {
                     isPassingHole = true;
-                }
-                if (data.x != 0||data.y!=0||data.z!=0) {//TODO filter
-                    isPassingHole = true;
+                    passingHoleCount = 0;
+                    Log.v("CalcVar", "isPassingHole:" + isPassingHole + "lastVar:" + lastVar + "allVar:" + allVar);
                 }
                 if (isPassingHole) {
                     passingHoleCount++;
                     if (passingHoleCount >= mPackageCollect) {
-                        sendAccelerometerArray(AccelerometerModelLinkedList);
+                        sendAccelerometerArray(AccelerometerModelLinkedList, new ICallback() {
+                            @Override
+                            public void callback(Object object) {
+                                int responseCode = 0;
+                                try {
+                                    responseCode = ((JSONObject) object).getInt("responseCode");
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                if (responseCode == 201) {
+                                    String urlStr = "http://" + mServer + "/api/holes/test/" + mDevice + "/" + AccelerometerModelLinkedList.get(0).timeUTC + "/" + AccelerometerModelLinkedList.size()
+                                            + "?velocity=" + mVelocity + "&entryRatioX=" + mEntryRatioX + "&longitude=" + mLongitude +"&latitude=" + mLatitude;
+                                    //urlStr="http://192.168.2.100:9000/api/holes/test/7feb16c3e9406d80/1432823706650/500?velocity=1&entryRatioX=0.5&entryRatioY=0.5&longitude=0&latitude=0";
+                                    GetThread.get(urlStr, new ICallback() {
+                                        @Override
+                                        public void callback(Object object) {
+                                            try {
+                                                final int responseCode = ((JSONObject) object).getInt("responseCode");
+                                                final String response = ((JSONObject) object).getString("response");
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        ((TextView) findViewById(R.id.home_screen_last_hole)).setText(response);
+                                                    }
+                                                });
+                                            } catch (Exception e) {
+                                                e.printStackTrace();
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        });
                         isPassingHole = false;
                         passingHoleCount = 0;
                     }
                 }
 
                 try {
-                runtimeData.put("isPassingHole",isPassingHole);
-                    runtimeData.put("progress",AccelerometerModelLinkedList.size());
-                tv = (TextView) findViewById(R.id.home_screen_runtime);
-                    if(tv!=null)
-                        tv.setText(runtimeData.toString());
+                    runtimeData.put("isPassingHole", isPassingHole);
+                    runtimeData.put("passingHoleCount", passingHoleCount);
+                    runtimeData.put("data", AccelerometerModelLinkedList.size());
+
+                    if (mHomeFragment != null && mHomeFragment.isResumed()) {
+                        ((TextView) findViewById(R.id.home_screen_runtime)).setText(runtimeData.toString());
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
 
+            @Override
             public void onAccuracyChanged(Sensor sensor, int accuracy) {
             }
         }, accelerometerSensor, SensorManager.SENSOR_DELAY_FASTEST);
+    }
+
+    @Override
+    public void onHomeFragmentResume() {
+        if (mHomeFragment != null) {
+            ((TextView) findViewById(R.id.text_view_home_device)).setText(mDevice);
+            ((TextView) findViewById(R.id.text_view_home_server)).setText(mServer);
+            ((TextView) findViewById(R.id.text_view_home_longitudinal)).setText(Double.toString(mLongitudinal));
+            ((TextView) findViewById(R.id.text_view_home_transverse)).setText(Double.toString(mTransverse));
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
     }
 
     @Override
@@ -316,7 +504,7 @@ public class MainActivity extends Activity
         FragmentManager fragmentManager = getFragmentManager();
         switch (position) {
             case 0:
-                mHomeFragment = HomeFragment.newInstance("", "");
+                mHomeFragment = HomeFragment.newInstance();
                 fragmentManager.beginTransaction()
                         .replace(R.id.container, mHomeFragment)
                         .commit();
@@ -335,34 +523,39 @@ public class MainActivity extends Activity
         }
     }
 
-    public void onButtonRefreshHomePressed(View view){
+    public void onButtonRefreshHomePressed(View view) {
         showSettings();
     }
-    public void onButtonSetPressed(View view){
+
+    public void onButtonSetPressed(View view) {
         onSettingsChanged();
     }
+
     @Override
     public void onSettingsChanged() {
         EditText et;
-        et=(EditText)findViewById(R.id.settings_device_id_value);
-        mDevice= Integer.parseInt(et.getText().toString());
-        et=(EditText)findViewById(R.id.settings_device_id_value);
-        mServer= et.getText().toString();
-        et=(EditText)findViewById(R.id.settings_device_id_value);
-        mLongitudinal= Double.parseDouble(et.getText().toString());
-        et=(EditText)findViewById(R.id.settings_device_id_value);
+        et = (EditText) findViewById(R.id.settings_device_id_value);
+        mDevice = (et.getText().toString());
+        et = (EditText) findViewById(R.id.settings_device_id_value);
+        mServer = et.getText().toString();
+        et = (EditText) findViewById(R.id.settings_device_id_value);
+        mLongitudinal = Double.parseDouble(et.getText().toString());
+        et = (EditText) findViewById(R.id.settings_device_id_value);
         mTransverse = Double.parseDouble(et.getText().toString());
     }
+
     public void showSettings() {
-        TextView tv = (TextView) findViewById(R.id.home_screen_settings);
-        String settingsString = "";
-        settingsString += "mDevice:" + mDevice + "\n";
-        settingsString += "mLongitudinal:" + mLongitudinal + "\n";
-        settingsString += "mTransverse:" + mTransverse + "\n";
-        settingsString += "mLongitude:" + mLongitude + "\n";
-        settingsString += "mLatitude:" + mLatitude + "\n";
-        settingsString += "mServer:" + mServer + "\n";
-        tv.setText(settingsString);
+//        TextView tv = (TextView) findViewById(R.id.home_screen_settings);
+//        String settingsString = "";
+//        settingsString += "mDevice:" + mDevice + "\n";
+//        settingsString += "mLongitudinal:" + mLongitudinal + "\n";
+//        settingsString += "mTransverse:" + mTransverse + "\n";
+//        settingsString += "mLongitude:" + mLongitude + "\n";
+//        settingsString += "mLatitude:" + mLatitude + "\n";
+//        settingsString += "mServer:" + mServer + "\n";
+//        tv.setText(settingsString);
+
+
     }
 
     public void onSectionAttached(int number) {
@@ -416,10 +609,6 @@ public class MainActivity extends Activity
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    public void onHomeChanged() {
-
-    }
 
     /**
      * A placeholder fragment containing a simple view.
@@ -450,6 +639,7 @@ public class MainActivity extends Activity
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
+
             return rootView;
         }
 

@@ -18,6 +18,9 @@ function onConnect(socket) {
   });
 
   // Insert sockets below
+  require('../api/entry/entry.socket').register(socket);
+  require('../api/location/location.socket').register(socket);
+  require('../api/combinedHole/combinedHole.socket').register(socket);
   require('../api/hole/hole.socket').register(socket);
   require('../api/accelerometer/accelerometer.socket').register(socket);
   require('../api/thing/thing.socket').register(socket);

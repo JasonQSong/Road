@@ -4,7 +4,8 @@ var mongoose = require('mongoose'),
     Schema = mongoose.Schema;
 
 var HoleSchema = new Schema({
-  device: Number,
+  device: String,
+  timeUTC:Number,
   diameter: Number,
   depth: Number,  
   longitude: Number,

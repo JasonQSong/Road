@@ -7,23 +7,20 @@ import org.json.JSONObject;
  * Created by jason on 5/5/2015.
  */
 public class AccelerometerModel {
-    public int device;
+    public String device;
     public double longitudinal;
     public double transverse;
-    public long time;
+    public long timeUTC;
     public double longitude;
     public double latitude;
     public double x;
     public double y;
     public double z;
+    public boolean sent=false;
     public JSONObject toJson() throws JSONException {
         JSONObject object = new JSONObject();
         object.put("device", device);
-        object.put("longitudinal", longitudinal);
-        object.put("transverse", transverse);
-        object.put("time", time);
-        object.put("longitude", longitude);
-        object.put("latitude", latitude);
+        object.put("timeUTC", timeUTC);
         object.put("x", x);
         object.put("y", y);
         object.put("z", z);

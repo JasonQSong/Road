@@ -3,3 +3,5 @@
 aliyun.txt
 *.in
 *.out
+*.zip
+/data
