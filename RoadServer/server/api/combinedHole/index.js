@@ -6,6 +6,7 @@ var controller = require('./combinedHole.controller');
 var router = express.Router();
 
 router.get('/', controller.index);
+router.get('/test/:lastHoleId/:timeUTC', controller.test);
 router.get('/:id', controller.show);
 router.post('/', controller.create);
 router.put('/:id', controller.update);

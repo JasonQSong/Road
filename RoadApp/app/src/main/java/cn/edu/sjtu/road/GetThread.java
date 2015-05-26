@@ -30,7 +30,6 @@ public class GetThread extends Thread{
         try {
             URL url = new URL(urlStr);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setDoInput(true);
             connection.setRequestMethod("GET");
             Log.v("GetThread", "url:" + urlStr);
             int responseCode = connection.getResponseCode();

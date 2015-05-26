@@ -1,4 +1,4 @@
-function ret=main(varargin)
+function ret=pothole(varargin)
 p=inputParser;
 defaultInputFilename='input.txt';
 defaultInputFilename='..\Wenzhuo\data\2015-1-22\1.txt';
@@ -60,7 +60,7 @@ for i=3:length(idx)%find out wave
         if(waveNum==1)%确定第几个波形进行后续处理，此处算则了第二个波形，即后轮的振动，因为前轮的阻尼振动会被后轮的受迫振动所覆盖掉
             [~,~,~]=calparam(waveData);
             [depth]=newgongshi(waveData,20);
-            fprintf(outputFile,'%s %s %f %f %f',char(timestart),char(timeend),sumx,sumy,depth);
+            fprintf(outputFile,'%s %s %f %f %f\n',char(timestart),char(timeend),sumx,sumy,depth);
         end
         waveNum=waveNum+1;
     else

@@ -125,8 +125,6 @@ exports.test = function(req, res) {
                   var depth = Number.parseFloat(data[4]);
                   var velocity = Number.parseFloat(req.query.velocity);
                   var diameter = velocity * (timeEnd - timeStart);
-                  console.log("params"+JSON.stringify(req.query));
-                  console.log("diameter"+diameter+"v"+velocity+"timeEnd"+timeEnd+"timeStart"+timeStart);
                   var entryRatioX = 0.5;
                   var entryRatioY = 0.5;
                   if (req.params.entryRatioX !== undefined) {

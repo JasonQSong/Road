@@ -37,8 +37,6 @@ public class PostThread extends Thread {
             byte[] entity = content.toString().getBytes();
             URL url = new URL(urlStr);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setDoOutput(true);
-            connection.setDoInput(true);
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", contentType);
             connection.setRequestProperty("Content-Length", String.valueOf(entity.length));
