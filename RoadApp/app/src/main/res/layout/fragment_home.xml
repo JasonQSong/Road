@@ -9,7 +9,7 @@
 
     <TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:stretchColumns="*">
 
@@ -33,6 +33,34 @@
 
         <TableRow
             android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:layout_span="2"
+                android:text="@string/label_home_section_surrounding_holes"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:layout_span="2"
+                android:text="@string/label_home_section_common"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
             <TextView
@@ -49,6 +77,7 @@
                 android:layout_column="1"
                 android:textColor="@color/TianyiWhite" />
         </TableRow>
+
 
         <TableRow
             android:layout_width="match_parent"
@@ -68,8 +97,39 @@
                 android:layout_column="1"
                 android:textColor="@color/TianyiWhite" />
         </TableRow>
-        .
 
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:text="@string/label_home_server"
+                android:textColor="@color/TianyiWhite" />
+
+            <TextView
+                android:id="@+id/text_view_home_server"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:layout_span="2"
+                android:text="Accelerometers"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
         <TableRow
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
@@ -129,6 +189,20 @@
 
         <TableRow
             android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:layout_span="2"
+                android:text="Location"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
             <TextView
@@ -173,14 +247,68 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_column="0"
-                android:text="@string/label_home_server"
+                android:text="@string/label_home_direction"
                 android:textColor="@color/TianyiWhite" />
 
             <TextView
-                android:id="@+id/text_view_home_server"
+                android:id="@+id/text_view_home_direction"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:text="@string/label_home_loc_type"
+                android:textColor="@color/TianyiWhite" />
+
+            <TextView
+                android:id="@+id/text_view_home_loc_type"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:text="@string/label_home_velocity"
+                android:textColor="@color/TianyiWhite" />
+
+            <TextView
+                android:id="@+id/text_view_home_velocity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:layout_span="2"
+                android:text="Entry"
+                android:textAppearance="?android:attr/textAppearanceLarge"
                 android:textColor="@color/TianyiWhite" />
         </TableRow>
 
@@ -230,6 +358,167 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_column="0"
+                android:text="@string/label_home_entry_ratio_x"
+                android:textColor="@color/TianyiWhite" />
+
+            <TextView
+                android:id="@+id/text_view_home_entry_ratio_x"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:text="@string/label_home_entry_ratio_y"
+                android:textColor="@color/TianyiWhite" />
+
+            <TextView
+                android:id="@+id/text_view_home_entry_ratio_y"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:layout_span="2"
+                android:text="Runtime Data"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:text="@string/label_home_runtime_data_cached"
+                android:textColor="@color/TianyiWhite" />
+
+            <TextView
+                android:id="@+id/text_view_home_runtime_data_cached"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:text="@string/label_home_runtime_is_passing_hole"
+                android:textColor="@color/TianyiWhite" />
+
+            <TextView
+                android:id="@+id/text_view_home_runtime_is_passing_hole"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:text="@string/label_home_runtime_passing_hole_count"
+                android:textColor="@color/TianyiWhite" />
+
+            <TextView
+                android:id="@+id/text_view_home_runtime_passing_hole_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:text="@string/label_home_runtime_last_var"
+                android:textColor="@color/TianyiWhite" />
+
+            <TextView
+                android:id="@+id/text_view_home_runtime_last_var"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:text="@string/label_home_runtime_all_var"
+                android:textColor="@color/TianyiWhite" />
+
+            <TextView
+                android:id="@+id/text_view_home_runtime_all_var"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:layout_span="2"
+                android:text="Last Hole"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
                 android:text="@string/label_home_last_depth"
                 android:textColor="@color/TianyiWhite" />
 
@@ -246,53 +535,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-
             <TextView
-                android:id="@+id/home_screen_settings"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_span="2"
-                android:text="@string/hello_blank_fragment" />
-
-        </TableRow>
-
-        <TableRow
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+                android:layout_column="0"
+                android:text="@string/label_home_last_diameter"
+                android:textColor="@color/TianyiWhite" />
 
             <TextView
-                android:id="@+id/home_screen_text_view"
+                android:id="@+id/text_view_home_last_diameter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_span="2"
-                android:text="@string/hello_blank_fragment" />
+                android:layout_column="1"
+                android:textColor="@color/TianyiWhite" />
         </TableRow>
 
-
-        <TableRow
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:id="@+id/home_screen_runtime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_span="2"
-                android:text="@string/hello_blank_fragment" />
-        </TableRow>
-
-        <TableRow
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:id="@+id/home_screen_last_hole"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_span="2"
-                android:text="@string/hello_blank_fragment" />
-
-        </TableRow>
 
         <TableRow
             android:layout_width="match_parent"

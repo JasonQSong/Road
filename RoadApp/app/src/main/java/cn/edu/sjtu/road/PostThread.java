@@ -72,4 +72,11 @@ public class PostThread extends Thread {
         PostThread postThread = new PostThread(urlStr, content, iCallback);
         threadPool.execute(postThread);
     }
+
+    public static void postJson(String urlStr, JSONObject jsonObject, ICallback iCallback) {
+        String content = jsonObject.toString();
+        PostThread postThread = new PostThread(urlStr, content, iCallback);
+        postThread.contentType = "application/json";
+        threadPool.execute(postThread);
+    }
 }

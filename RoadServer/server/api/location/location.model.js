@@ -8,6 +8,9 @@ var LocationSchema = new Schema({
   timeUTC: Number,
   latitude: Number,
   longitude: Number,
+  direction:Number,
+  velocity:Number,
+  locType:Number,
 });
 
 module.exports = mongoose.model('Location', LocationSchema);

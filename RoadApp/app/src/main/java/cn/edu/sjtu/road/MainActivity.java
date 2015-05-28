@@ -17,6 +17,7 @@ import android.location.LocationProvider;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Message;
+import android.util.JsonReader;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -32,6 +33,7 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONStringer;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -72,6 +74,7 @@ import com.baidu.location.GeofenceClient.OnGeofenceTriggerListener;
 import com.baidu.location.GeofenceClient.OnRemoveBDGeofencesResultListener;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
+import com.baidu.mapapi.utils.DistanceUtil;
 
 
 import android.provider.Settings.Secure;
@@ -110,10 +113,12 @@ public class MainActivity extends Activity
     private double mVelocity;
     private double mEntryRatioX;
     private double mEntryRatioY;
+    private double mDirection;
+    private LocationModel mLastLocation;
+    private double lastVar;
+    private double allVar;
 
     private JSONObject runtimeData;
-
-    private ExecutorService threadPool;
 
 
     protected void sendAccelerometerArray(final LinkedList<AccelerometerModel> accelerometerArrayData, final ICallback iCallback) {
@@ -188,9 +193,6 @@ public class MainActivity extends Activity
                         }
                         in.close();
                         String responseStr = response.toString();
-                        TextView tv = (TextView) findViewById(R.id.home_screen_last_hole);
-                        if (tv != null)
-                            tv.setText(responseStr);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -293,7 +295,7 @@ public class MainActivity extends Activity
 
     public long lastCountTime = 0;
     public int lastCountNum = 0;
-    public long lastUpdateAccelerometerUITime=0;
+    public long lastUpdateAccelerometerUITime = 0;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -311,7 +313,6 @@ public class MainActivity extends Activity
                 (DrawerLayout) findViewById(R.id.drawer_layout));
 
         //init
-        threadPool = Executors.newCachedThreadPool();
         mDevice = Secure.getString(getApplicationContext().getContentResolver(), Secure.ANDROID_ID);
         mLongitudinal = Double.parseDouble(getString(R.string.settings_longitudinal_wheelbase_value));
         mTransverse = Double.parseDouble(getString(R.string.settings_transverse_wheelbase_value));
@@ -342,6 +343,28 @@ public class MainActivity extends Activity
                     mLongitude = bdLocation.getLongitude();
                     mLatitude = bdLocation.getLatitude();
                     mLocationType = bdLocation.getLocType();
+                    mDirection = bdLocation.getDirection();
+                    LocationModel nowLocationModel = new LocationModel();
+                    nowLocationModel.device = mDevice;
+                    nowLocationModel.timeUTC = new Date().getTime();
+                    nowLocationModel.longitude = mLongitude;
+                    nowLocationModel.latitude = mLatitude;
+                    nowLocationModel.locType = mLocationType;
+                    nowLocationModel.direction = mDirection;
+                    double distance =0;
+                    mVelocity=0;
+                    if(mLastLocation!=null) {
+                        DistanceUtil.getDistance(new LatLng(mLatitude, mLongitude), new LatLng(mLastLocation.latitude, mLastLocation.longitude));
+                        mVelocity = distance * 1000 / (mLastLocation.timeUTC - nowLocationModel.timeUTC);
+                    }
+                    nowLocationModel.velocity = mVelocity;
+                    if (mHomeFragment != null && mHomeFragment.isResumed()) {
+                        ((TextView) findViewById(R.id.text_view_home_latitude)).setText(Double.toString(mLatitude));
+                        ((TextView) findViewById(R.id.text_view_home_longitude)).setText(Double.toString(mLongitude));
+                        ((TextView) findViewById(R.id.text_view_home_direction)).setText(Double.toString(mDirection));
+                        ((TextView) findViewById(R.id.text_view_home_loc_type)).setText(Double.toString(mLocationType));
+                        ((TextView) findViewById(R.id.text_view_home_velocity)).setText(Double.toString(mVelocity));
+                    }
                     if (mHomeFragment != null && mHomeFragment.isResumed() && mHomeFragment.mMapView != null) {
                         mHomeFragment.mMapView.getMap().setMapStatus(MapStatusUpdateFactory.newMapStatus(new MapStatus.Builder()
                                         .target(new LatLng(bdLocation.getLatitude(), bdLocation.getLongitude()))
@@ -356,10 +379,13 @@ public class MainActivity extends Activity
                                         .build()
                         );
                     }
-                    if (mHomeFragment != null && mHomeFragment.isResumed()) {
-                        ((TextView) findViewById(R.id.text_view_home_latitude)).setText(Double.toString(mLatitude));
-                        ((TextView) findViewById(R.id.text_view_home_longitude)).setText(Double.toString(mLongitude));
+                    String urlStr = "http://" + mServer + "/api/locations";
+                    try {
+                        PostThread.postJson(urlStr, nowLocationModel.toJson(), null);
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
+                    mLastLocation = nowLocationModel;
                     Log.v("BDLocation", "LocationChanged" + ",locType:" + mLocationType + ",longitude:" + mLongitude + ",latitude" + mLatitude);
                 }
             }
@@ -385,13 +411,12 @@ public class MainActivity extends Activity
                 data.y = event.values[SensorManager.DATA_Y];
                 data.z = event.values[SensorManager.DATA_Z];
                 try {
-                    if (mHomeFragment != null && mHomeFragment.isResumed()&&data.timeUTC>lastUpdateAccelerometerUITime+100) {
-                        ((TextView) findViewById(R.id.home_screen_text_view)).setText(data.toJson().toString());
+                    if (mHomeFragment != null && mHomeFragment.isResumed() && data.timeUTC > lastUpdateAccelerometerUITime + 100) {
                         ((TextView) findViewById(R.id.text_view_home_time)).setText(DateFormat.getDateTimeInstance().format(new Date(data.timeUTC)));
                         ((TextView) findViewById(R.id.text_view_home_accelerometer_x)).setText(Double.toString(data.x));
                         ((TextView) findViewById(R.id.text_view_home_accelerometer_y)).setText(Double.toString(data.y));
                         ((TextView) findViewById(R.id.text_view_home_accelerometer_z)).setText(Double.toString(data.z));
-                        lastUpdateAccelerometerUITime=data.timeUTC;
+                        lastUpdateAccelerometerUITime = data.timeUTC;
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -415,8 +440,8 @@ public class MainActivity extends Activity
                 }
                 int start = AccelerometerModelLinkedList.size() - 5;
                 start = start < 0 ? 0 : start;
-                double lastVar = calcVar(AccelerometerModelLinkedList.subList(start, AccelerometerModelLinkedList.size()));
-                double allVar = calcVar(AccelerometerModelLinkedList);
+                lastVar = calcVar(AccelerometerModelLinkedList.subList(start, AccelerometerModelLinkedList.size()));
+                allVar = calcVar(AccelerometerModelLinkedList);
                 if (lastVar > allVar * 2 && lastVar > 100 && AccelerometerModelLinkedList.size() > 10 && !isPassingHole) {
                     isPassingHole = true;
                     passingHoleCount = 0;
@@ -436,7 +461,7 @@ public class MainActivity extends Activity
                                 }
                                 if (responseCode == 201) {
                                     String urlStr = "http://" + mServer + "/api/holes/test/" + mDevice + "/" + AccelerometerModelLinkedList.get(0).timeUTC + "/" + AccelerometerModelLinkedList.size()
-                                            + "?velocity=" + mVelocity + "&entryRatioX=" + mEntryRatioX + "&longitude=" + mLongitude +"&latitude=" + mLatitude;
+                                            + "?velocity=" + mVelocity + "&entryRatioX=" + mEntryRatioX + "&entryRatioY=" + mEntryRatioY + "&longitude=" + mLongitude + "&latitude=" + mLatitude;
                                     //urlStr="http://192.168.2.100:9000/api/holes/test/7feb16c3e9406d80/1432823706650/500?velocity=1&entryRatioX=0.5&entryRatioY=0.5&longitude=0&latitude=0";
                                     GetThread.get(urlStr, new ICallback() {
                                         @Override
@@ -447,7 +472,22 @@ public class MainActivity extends Activity
                                                 runOnUiThread(new Runnable() {
                                                     @Override
                                                     public void run() {
-                                                        ((TextView) findViewById(R.id.home_screen_last_hole)).setText(response);
+                                                        double lastDiameter = 0;
+                                                        double lastDepth = 0;
+                                                        String lastHoleId="0";
+                                                        try {
+                                                            JSONObject jsonObject = new JSONObject(response);
+                                                            lastDiameter = jsonObject.getDouble("diameter");
+                                                            lastDepth = jsonObject.getDouble("depth");
+                                                            lastHoleId=                                 jsonObject.getString("_id");
+                                                        } catch (Exception e) {
+                                                            e.printStackTrace();
+                                                        }
+                                                        ((TextView) findViewById(R.id.text_view_home_last_diameter)).setText(Double.toString(lastDiameter));
+                                                        ((TextView) findViewById(R.id.text_view_home_last_depth)).setText(Double.toString(lastDepth));
+
+                                                        String urlStr = "http://" + mServer + "/api/combinedHoles/test/" + lastHoleId + "/" + new Date().getTime();
+                                                        GetThread.get(urlStr, null);
                                                     }
                                                 });
                                             } catch (Exception e) {
@@ -463,17 +503,11 @@ public class MainActivity extends Activity
                     }
                 }
 
-                try {
-                    runtimeData.put("isPassingHole", isPassingHole);
-                    runtimeData.put("passingHoleCount", passingHoleCount);
-                    runtimeData.put("data", AccelerometerModelLinkedList.size());
-
-                    if (mHomeFragment != null && mHomeFragment.isResumed()) {
-                        ((TextView) findViewById(R.id.home_screen_runtime)).setText(runtimeData.toString());
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                ((TextView) findViewById(R.id.text_view_home_runtime_data_cached)).setText(Integer.toString(AccelerometerModelLinkedList.size()));
+                ((TextView) findViewById(R.id.text_view_home_runtime_is_passing_hole)).setText(Boolean.toString(isPassingHole));
+                ((TextView) findViewById(R.id.text_view_home_runtime_passing_hole_count)).setText(Integer.toString(passingHoleCount));
+                ((TextView) findViewById(R.id.text_view_home_runtime_last_var)).setText(Double.toString(lastVar));
+                ((TextView) findViewById(R.id.text_view_home_runtime_all_var)).setText(Double.toString(allVar));
             }
 
             @Override
@@ -489,6 +523,8 @@ public class MainActivity extends Activity
             ((TextView) findViewById(R.id.text_view_home_server)).setText(mServer);
             ((TextView) findViewById(R.id.text_view_home_longitudinal)).setText(Double.toString(mLongitudinal));
             ((TextView) findViewById(R.id.text_view_home_transverse)).setText(Double.toString(mTransverse));
+            ((TextView) findViewById(R.id.text_view_home_entry_ratio_x)).setText(Double.toString(mEntryRatioX));
+            ((TextView) findViewById(R.id.text_view_home_entry_ratio_y)).setText(Double.toString(mEntryRatioY));
         }
     }
 

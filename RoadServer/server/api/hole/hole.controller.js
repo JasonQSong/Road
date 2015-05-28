@@ -99,11 +99,12 @@ exports.test = function(req, res) {
       var recordFilename = '.\\data\\' + req.params.device + '-' + req.params.timeUTC + '-' + req.params.limit;
       var inputFilename = recordFilename + '.in';
       var outputFilename = recordFilename + '.out';
+      var logFilename=recordFilename + '.log';
       fs.writeFile(inputFilename, dataStr, function(err) {
         if (err) {
           return handleError(res, err);
         }
-        process.exec('..\\Pothole\\pothole.exe' + ' i ' + inputFilename + ' o ' + outputFilename + '> potholelog.txt',
+        process.exec('..\\Pothole\\pothole.exe' + ' i ' + inputFilename + ' o ' + outputFilename + ' > '+logFilename,
           function(err) {
             if (err) {
               return handleError(res, err);
@@ -124,7 +125,7 @@ exports.test = function(req, res) {
                   var sumY = Number.parseFloat(data[3]);
                   var depth = Number.parseFloat(data[4]);
                   var velocity = Number.parseFloat(req.query.velocity);
-                  var diameter = velocity * (timeEnd - timeStart);
+                  var diameter = velocity * (timeEnd - timeStart)/1000;
                   var entryRatioX = 0.5;
                   var entryRatioY = 0.5;
                   if (req.params.entryRatioX !== undefined) {

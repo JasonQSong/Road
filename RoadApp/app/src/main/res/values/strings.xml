@@ -42,6 +42,19 @@
     <string name="label_home_longitudinal">Longitudinal</string>
     <string name="label_home_transverse">Transverse:</string>
     <string name="label_home_last_depth">Last Depth:</string>
+    <string name="label_home_section_common">Common</string>
+    <string name="label_home_section_surrounding_holes">Surrounding Holes</string>
+    <string name="label_home_last_diameter">Last Diameter:</string>
+    <string name="label_home_runtime_all_var">All Variance:</string>
+    <string name="label_home_runtime_last_var">Last Variance:</string>
+    <string name="label_home_runtime_passing_hole_count">Passing Hole Count:</string>
+    <string name="label_home_runtime_is_passing_hole">Is Passing Hole:</string>
+    <string name="label_home_runtime_data_cached">Data Cached:</string>
+    <string name="label_home_entry_ratio_y">Entry Ratio Y:</string>
+    <string name="label_home_entry_ratio_x">Entry Ratio X:</string>
+    <string name="label_home_velocity">Velocity:</string>
+    <string name="label_home_loc_type">Location Type:</string>
+    <string name="label_home_direction">Direction:</string>
 
 
 </resources>

@@ -84,6 +84,57 @@ function handleError(res, err) {
   return res.send(500, err);
 }
 
+exports.lastHoleId = function(req, res) {
+  CombinedHole
+    .findOne()
+    .sort('-lastHole_id')
+    .exec(function(err, combinedHole) {
+      if (err) {
+        return handleError(res, err);
+      }
+      if (!combinedHole) {
+        return res.send(404);
+      }
+      return res.send(combinedHole.lastHole_id);
+    });
+
+}
+exports.getSurroundHoles = function(req, res) {
+  CombinedHole
+    .findOne()
+    .sort('-lastHole_id')
+    .exec(function(err, combinedHole) {
+      if (err) {
+        return handleError(res, err);
+      }
+      if (!combinedHole) {
+        return res.send(404);
+      }
+      var inputLastHoleId = '0';
+      if (combinedHole !== null) {
+        inputLastHoleId = combinedHole.lastHole_id;
+      }
+      var longitudeMin = Number.parseFloat(req.query.longitude?req.query.longitude:0) - 0.01;
+      var longitudeMax = Number.parseFloat(req.query.longitude?req.query.longitude:0) + 0.01;
+      var latitudeMin = Number.parseFloat(req.query.latitude?req.query.latitude:0) - 0.01;
+      var latitudeMax = Number.parseFloat(req.query.latitude?req.query.latitude:0) + 0.01;
+
+      CombinedHole
+        .where('lastHole_id').gte(inputLastHoleId)
+        .where('longitude').gte(longitudeMin)
+        .where('longitude').lte(longitudeMax)
+        .where('latitude').gte(latitudeMin)
+        .where('latitude').lte(latitudeMax)
+        .exec(function(err, combinedHoles) {
+          if (err) {
+            return handleError(res, err);
+          }
+          return res.json(200, combinedHoles);
+        });
+    });
+
+}
+
 
 exports.test = function(req, res) {
   Hole
@@ -99,92 +150,102 @@ exports.test = function(req, res) {
         dataHoleStr += (holes[i].longitude ? holes[i].longitude : 0) + ' ';
         dataHoleStr += (holes[i].latitude ? holes[i].latitude : 0) + '\n';
       }
-
-      CombinedHole.find(function(err, combinedHoles) {
-        if (err) {
-          return handleError(res, err);
-        }
-        var dataMeanStr = '';
-        var inputLastHoleId = '0';
-        for (var i = 0; i < combinedHoles.length; i++) {
-          dataMeanStr += (combinedHoles[i].diameter ? combinedHoles[i].diameter : 0) + ' ';
-          dataMeanStr += (combinedHoles[i].diameter ? combinedHoles[i].depth : 0) + ' ';
-          dataMeanStr += (combinedHoles[i].diameter ? combinedHoles[i].longitude : 0) + ' ';
-          dataMeanStr += (combinedHoles[i].diameter ? combinedHoles[i].latitude : 0) + ' ';
-          dataMeanStr += (combinedHoles[i].trust ? combinedHoles[i].trust : 0) + '\n';
-          inputLastHoleId = (combinedHoles[i].lastHole_id > inputLastHoleId ? combinedHoles[i].lastHole_id : inputLastHoleId) ;
-        }
-
-        var dataDir = '.\\data_kmean\\'
-        var inputHoleFilename = dataDir + req.params.lastHoleId + '-' + (new Date()).getTime() + '-hole.in'
-        var inputMeanFilename = inputLastHoleId + '-' + (new Date()).getTime() + '-mean.in';
-        var outputMeanFilename = req.params.lastHoleId + '-' + (new Date()).getTime() + '-mean.out';
-        fs.writeFile(inputHoleFilename, dataHoleStr, function(err) {
+      CombinedHole
+        .findOne()
+        .sort('-lastHole_id')
+        .exec(function(err, combinedHole) {
           if (err) {
             return handleError(res, err);
           }
-          fs.writeFile(inputMeanFilename, dataMeanStr, function(err) {
-            if (err) {
-              return handleError(res, err);
-            }
-          });
-          res.json(200, {});
-          // process.exec('..\\Pothole\\pothole.exe' + ' i ' + inputFilename + ' o ' + outputFilename + '> potholelog.txt',
-          //   function(err) {
-          //     if (err) {
-          //       return handleError(res, err);
-          //     }
-          //     fs.readFile(outputFilename, 'utf-8', function(err, data) {
-          //         if (err) {
-          //           return handleError(res, err);
-          //         }
-          //         if (data == '') {
-          //           return res.json(404, {
-          //             err: 'no hole'
-          //           })
-          //         } else {
-          //           data = data.split(' ');
-          //           var timeStart = Number.parseInt(data[0]);
-          //           var timeEnd = Number.parseInt(data[1]);
-          //           var sumX = Number.parseFloat(data[2]);
-          //           var sumY = Number.parseFloat(data[3]);
-          //           var depth = Number.parseFloat(data[4]);
-          //           var velocity = Number.parseFloat(req.query.velocity);
-          //           var diameter = velocity * (timeEnd - timeStart);
-          //           console.log("params"+JSON.stringify(req.query));
-          //           console.log("diameter"+diameter+"v"+velocity+"timeEnd"+timeEnd+"timeStart"+timeStart);
-          //           var entryRatioX = 0.5;
-          //           var entryRatioY = 0.5;
-          //           if (req.params.entryRatioX !== undefined) {
-          //             entryRatioX = Number.parseFloat(req.query.entryRatioX);
-          //             entryRatioX = (entryRatioX < 0.2) ? 0.2 : entryRatioX;
-          //             entryRatioX = (entryRatioX > 0.8) ? 0.8 : entryRatioX;
-          //           }
-          //           if (req.params.entryRatioY !== undefined) {
-          //             entryRatioY = Number.parseFloat(req.query.entryRatioY);
-          //             entryRatioY = (entryRatioY < 0.2) ? 0.2 : entryRatioY;
-          //             entryRatioY = (entryRatioY > 0.8) ? 0.8 : entryRatioY;
-          //           }
-          //           depth = depth / entryRatioX / entryRatioY;
-          //           Hole.create({
-          //             device: req.params.device,
-          //             timeUTC: timeStart,
-          //             diameter: diameter,
-          //             depth: depth,
-          //             longitude:  Number.parseFloat(req.query.longitude),
-          //             latitude: Number.parseFloat(req.query.latitude)
-          //           }, function(err, hole) {
-          //             if (err) {
-          //               return handleError(res, err);
-          //             }
-          //             res.json(201, hole);
-          //           });
-          //         }
-          //       })
-          //       //return res.json(200, accelerometers);
-          //   })
+          var inputLastHoleId = '0';
+          if (combinedHole !== null) {
+            inputLastHoleId = combinedHole.lastHole_id;
+            console.log('combinedHole' + combinedHole.lastHole_id);
+          }
+          if (inputLastHoleId >= req.params.lastHoleId) {
+            return res.json(200, {});
+          }
+          CombinedHole
+            .where('lastHole_id').gte(inputLastHoleId)
+            .exec(function(err, combinedHoles) {
+              if (err) {
+                return handleError(res, err);
+              }
+              var dataMeanStr = '';
+              for (var i = 0; i < combinedHoles.length; i++) {
+                dataMeanStr += (combinedHoles[i].diameter ? combinedHoles[i].diameter : 0) + ' ';
+                dataMeanStr += (combinedHoles[i].depth ? combinedHoles[i].depth : 0) + ' ';
+                dataMeanStr += (combinedHoles[i].longitude ? combinedHoles[i].longitude : 0) + ' ';
+                dataMeanStr += (combinedHoles[i].latitude ? combinedHoles[i].latitude : 0) + ' ';
+                dataMeanStr += (combinedHoles[i].trust ? combinedHoles[i].trust : 0) + '\n';
+              }
+              var dataDir = '.\\data_kmean\\'
+              var inputHoleFilename = dataDir + req.params.lastHoleId + '-' + (new Date()).getTime() + '-hole.in'
+              var inputMeanFilename = dataDir + inputLastHoleId + '-' + (new Date()).getTime() + '-mean.in';
+              var outputMeanFilename = dataDir + req.params.lastHoleId + '-' + (new Date()).getTime() + '-mean.out';
+              var logFilename = dataDir + req.params.lastHoleId + '-' + (new Date()).getTime() + '.log';
+              fs.writeFile(inputHoleFilename, dataHoleStr, function(err) {
+                if (err) {
+                  return handleError(res, err);
+                }
+                fs.writeFile(inputMeanFilename, dataMeanStr, function(err) {
+                  if (err) {
+                    return handleError(res, err);
+                  }
+                  var cmd = '..\\StepKMean\\StepKMean.exe' + ' iid ' + inputLastHoleId + ' ih ' + inputHoleFilename + ' im ' + inputMeanFilename + ' oid ' + req.params.lastHoleId + ' om ' + outputMeanFilename + ' > ' + logFilename;
+                  process.exec(cmd,
+                    function(err) {
+                      if (err) {
+                        return handleError(res, err);
+                      }
+                      fs.readFile(outputMeanFilename, 'utf-8', function(err, data) {
+                        if (err) {
+                          return handleError(res, err);
+                        }
+                        if (data == '') {
+                          return res.json(404, {
+                            err: 'no hole'
+                          });
+                        } else {
+                          var errs = [];
+                          var combinedHoles = [];
+                          var lines = data.split('\n');
+                          for (var i in lines) {
+                            if (lines[i] == '') {
+                              continue;
+                            }
+                            var fields = lines[i].split(' ');
+                            var diameter = Number.parseFloat(fields[0]);
+                            var depth = Number.parseFloat(fields[1]);
+                            var longitude = Number.parseFloat(fields[2]);
+                            var latitude = Number.parseFloat(fields[3]);
+                            var trust = Number.parseInt(fields[4]);
+                            CombinedHole.create({
+                              diameter: diameter,
+                              depth: depth,
+                              longitude: longitude,
+                              latitude: latitude,
+                              trust: trust,
+                              lastHole_id: req.params.lastHoleId,
+                            }, function(err, combinedHole) {
+                              if (err) {
+                                errs.push(err);
+                              } else {
+                                combinedHoles.push(combinedHole);
+                              }
+                            });
+                          }
+                          if (errs.length > 0) {
+                            return handleError(res, errs);
+                          } else {
+                            return res.json(201, combinedHoles);
+                          }
+                        }
+                      });
+                    });
+                });
+              });
+            });
         });
-        return res.json(200, combinedHoles);
-      });
     });
 };
