@@ -346,7 +346,7 @@ public class MainActivity extends Activity
                     for (int i = 0; i < surroundingHoles.size(); i++) {
                         CombinedHoleModel model = surroundingHoles.get(i);
                         int radius=(int)Math.ceil( Math.sqrt(model.trust));
-                        radius=radius<10?radius:10;
+                        radius=(radius<10?radius:10)+2;
                         OverlayOptions option = new DotOptions()
                                 .center(new LatLng(model.latitude, model.longitude))
                                 .radius(radius)
