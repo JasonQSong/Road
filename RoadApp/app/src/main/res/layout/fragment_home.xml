@@ -49,6 +49,19 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
+            <ListView
+                android:id="@+id/list_view_home_surrounding_holes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_column="0"
+                android:layout_span="2"
+                android:textColor="@color/TianyiWhite" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -130,6 +143,7 @@
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:textColor="@color/TianyiWhite" />
         </TableRow>
+
         <TableRow
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
@@ -511,6 +525,7 @@
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:textColor="@color/TianyiWhite" />
         </TableRow>
+
         <TableRow
             android:layout_width="match_parent"
             android:layout_height="wrap_content">

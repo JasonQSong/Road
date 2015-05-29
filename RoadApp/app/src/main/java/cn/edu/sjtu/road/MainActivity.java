@@ -6,6 +6,7 @@ import android.app.ActionBar;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.Context;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -28,6 +29,7 @@ import android.view.ViewGroup;
 import android.support.v4.widget.DrawerLayout;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -43,6 +45,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -56,6 +59,8 @@ import java.util.logging.LogRecord;
 
 import com.baidu.mapapi.SDKInitializer;
 import com.baidu.mapapi.map.BaiduMap;
+import com.baidu.mapapi.map.CircleOptions;
+import com.baidu.mapapi.map.DotOptions;
 import com.baidu.mapapi.map.MapStatus;
 import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
@@ -73,6 +78,7 @@ import com.baidu.location.GeofenceClient.OnAddBDGeofencesResultListener;
 import com.baidu.location.GeofenceClient.OnGeofenceTriggerListener;
 import com.baidu.location.GeofenceClient.OnRemoveBDGeofencesResultListener;
 import com.baidu.mapapi.map.MyLocationData;
+import com.baidu.mapapi.map.OverlayOptions;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.utils.DistanceUtil;
 
@@ -297,6 +303,71 @@ public class MainActivity extends Activity
     public int lastCountNum = 0;
     public long lastUpdateAccelerometerUITime = 0;
 
+    protected void requestSurroundingHoles() {
+        String urlStr = "http://" + mServer + "/api/combinedHoles/getSurroundHoles"
+                + "?longitude=" + mLongitude + "&latitude=" + mLatitude;
+        GetThread.get(urlStr, new ICallback() {
+            @Override
+            public void callback(Object object) {
+                try {
+                    final int responseCode = ((JSONObject) object).getInt("responseCode");
+                    final String response = ((JSONObject) object).getString("response");
+                    JSONArray jsonArray = new JSONArray(response);
+                    updateSurroundingHoles(jsonArray);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        surroundingHolesAdapter.notifyDataSetChanged();
+                    }
+                });
+            }
+        });
+    }
+
+    protected void updateSurroundingHoles(JSONArray jsonArray) {
+        surroundingHoles.clear();
+        try {
+            for (int i = 0; i < jsonArray.length(); i++) {
+                CombinedHoleModel model = new CombinedHoleModel();
+                model.fromJson(jsonArray.getJSONObject(i));
+                if (mLatitude != 0 && mLongitude != 0) {
+                    model.dis = DistanceUtil.getDistance(new LatLng(mLatitude, mLongitude), new LatLng(mLastLocation.latitude, mLastLocation.longitude));
+                }
+                surroundingHoles.add(model);
+            }
+            if (mHomeFragment != null && mHomeFragment.isResumed() && mHomeFragment.mMapView != null) {
+                //mHomeFragment.mMapView.getMap().clear();
+                for (int i = 0; i < surroundingHoles.size(); i++) {
+                    CombinedHoleModel model = surroundingHoles.get(i);
+                    OverlayOptions option = new DotOptions()
+                            .center(new LatLng(model.latitude, model.longitude))
+                            .radius(50)
+                            .visible(true)
+                            .zIndex(5000);
+                    Log.d("Overlay", "lati" + model.latitude + "long" + model.longitude);
+                    mHomeFragment.mMapView.getMap().addOverlay(option);
+                    mHomeFragment.mMapView.getMap().addOverlay(new CircleOptions()
+                                    .center(new LatLng(mLatitude, mLongitude))
+                                    .fillColor(0xAA66CCFF)
+                    );
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (mHomeFragment != null && mHomeFragment.isResumed() && mHomeFragment.mMapView != null) {
+            mHomeFragment.mMapView.getMap().clear();
+
+
+        }
+    }
+
+    final ArrayList<CombinedHoleModel> surroundingHoles = new ArrayList<CombinedHoleModel>();
+    ArrayAdapter<CombinedHoleModel> surroundingHolesAdapter;
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         SDKInitializer.initialize(getApplicationContext());
@@ -351,9 +422,9 @@ public class MainActivity extends Activity
                     nowLocationModel.latitude = mLatitude;
                     nowLocationModel.locType = mLocationType;
                     nowLocationModel.direction = mDirection;
-                    double distance =0;
-                    mVelocity=0;
-                    if(mLastLocation!=null) {
+                    double distance = 0;
+                    mVelocity = 0;
+                    if (mLastLocation != null) {
                         DistanceUtil.getDistance(new LatLng(mLatitude, mLongitude), new LatLng(mLastLocation.latitude, mLastLocation.longitude));
                         mVelocity = distance * 1000 / (mLastLocation.timeUTC - nowLocationModel.timeUTC);
                     }
@@ -385,6 +456,7 @@ public class MainActivity extends Activity
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
+                    requestSurroundingHoles();
                     mLastLocation = nowLocationModel;
                     Log.v("BDLocation", "LocationChanged" + ",locType:" + mLocationType + ",longitude:" + mLongitude + ",latitude" + mLatitude);
                 }
@@ -474,18 +546,19 @@ public class MainActivity extends Activity
                                                     public void run() {
                                                         double lastDiameter = 0;
                                                         double lastDepth = 0;
-                                                        String lastHoleId="0";
+                                                        String lastHoleId = "0";
                                                         try {
                                                             JSONObject jsonObject = new JSONObject(response);
                                                             lastDiameter = jsonObject.getDouble("diameter");
                                                             lastDepth = jsonObject.getDouble("depth");
-                                                            lastHoleId=                                 jsonObject.getString("_id");
+                                                            lastHoleId = jsonObject.getString("_id");
                                                         } catch (Exception e) {
                                                             e.printStackTrace();
                                                         }
-                                                        ((TextView) findViewById(R.id.text_view_home_last_diameter)).setText(Double.toString(lastDiameter));
-                                                        ((TextView) findViewById(R.id.text_view_home_last_depth)).setText(Double.toString(lastDepth));
-
+                                                        if (mHomeFragment != null && mHomeFragment.isResumed()) {
+                                                            ((TextView) findViewById(R.id.text_view_home_last_diameter)).setText(Double.toString(lastDiameter));
+                                                            ((TextView) findViewById(R.id.text_view_home_last_depth)).setText(Double.toString(lastDepth));
+                                                        }
                                                         String urlStr = "http://" + mServer + "/api/combinedHoles/test/" + lastHoleId + "/" + new Date().getTime();
                                                         GetThread.get(urlStr, null);
                                                     }
@@ -502,12 +575,14 @@ public class MainActivity extends Activity
                         passingHoleCount = 0;
                     }
                 }
+                if (mHomeFragment != null && mHomeFragment.isResumed()) {
 
-                ((TextView) findViewById(R.id.text_view_home_runtime_data_cached)).setText(Integer.toString(AccelerometerModelLinkedList.size()));
-                ((TextView) findViewById(R.id.text_view_home_runtime_is_passing_hole)).setText(Boolean.toString(isPassingHole));
-                ((TextView) findViewById(R.id.text_view_home_runtime_passing_hole_count)).setText(Integer.toString(passingHoleCount));
-                ((TextView) findViewById(R.id.text_view_home_runtime_last_var)).setText(Double.toString(lastVar));
-                ((TextView) findViewById(R.id.text_view_home_runtime_all_var)).setText(Double.toString(allVar));
+                    ((TextView) findViewById(R.id.text_view_home_runtime_data_cached)).setText(Integer.toString(AccelerometerModelLinkedList.size()));
+                    ((TextView) findViewById(R.id.text_view_home_runtime_is_passing_hole)).setText(Boolean.toString(isPassingHole));
+                    ((TextView) findViewById(R.id.text_view_home_runtime_passing_hole_count)).setText(Integer.toString(passingHoleCount));
+                    ((TextView) findViewById(R.id.text_view_home_runtime_last_var)).setText(Double.toString(lastVar));
+                    ((TextView) findViewById(R.id.text_view_home_runtime_all_var)).setText(Double.toString(allVar));
+                }
             }
 
             @Override
@@ -525,6 +600,8 @@ public class MainActivity extends Activity
             ((TextView) findViewById(R.id.text_view_home_transverse)).setText(Double.toString(mTransverse));
             ((TextView) findViewById(R.id.text_view_home_entry_ratio_x)).setText(Double.toString(mEntryRatioX));
             ((TextView) findViewById(R.id.text_view_home_entry_ratio_y)).setText(Double.toString(mEntryRatioY));
+            surroundingHolesAdapter = new ArrayAdapter<CombinedHoleModel>(this, R.layout.list_view_item, surroundingHoles);
+            ((ListView) findViewById(R.id.list_view_home_surrounding_holes)).setAdapter(surroundingHolesAdapter);
         }
     }
 
@@ -560,6 +637,8 @@ public class MainActivity extends Activity
     }
 
     public void onButtonRefreshHomePressed(View view) {
+        requestSurroundingHoles();
+
         showSettings();
     }
 
@@ -569,15 +648,14 @@ public class MainActivity extends Activity
 
     @Override
     public void onSettingsChanged() {
-        EditText et;
-        et = (EditText) findViewById(R.id.settings_device_id_value);
-        mDevice = (et.getText().toString());
-        et = (EditText) findViewById(R.id.settings_device_id_value);
-        mServer = et.getText().toString();
-        et = (EditText) findViewById(R.id.settings_device_id_value);
-        mLongitudinal = Double.parseDouble(et.getText().toString());
-        et = (EditText) findViewById(R.id.settings_device_id_value);
-        mTransverse = Double.parseDouble(et.getText().toString());
+        if (mSettingsFragment != null && mSettingsFragment.isResumed()) {
+            mDevice = ((EditText) findViewById(R.id.settings_device_id_value)).getText().toString();
+            mServer = ((EditText) findViewById(R.id.settings_device_id_value)).getText().toString();
+            mLongitudinal = Double.parseDouble(((EditText) findViewById(R.id.settings_device_id_value)).getText().toString());
+            mTransverse = Double.parseDouble(((EditText) findViewById(R.id.settings_device_id_value)).getText().toString());
+            mEntryRatioX = Double.parseDouble(((EditText) findViewById(R.id.edit_text_settings_entry_ratio_x)).getText().toString());
+            mEntryRatioX = Double.parseDouble(((EditText) findViewById(R.id.edit_text_settings_entry_ratio_y)).getText().toString());
+        }
     }
 
     public void showSettings() {

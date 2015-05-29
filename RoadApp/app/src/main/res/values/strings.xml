@@ -3,7 +3,7 @@
 
     <string name="title_section1">Home</string>
     <string name="title_section2">Settings</string>
-    <string name="title_section3">Section 3</string>
+    <string name="title_section3">Readme</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
@@ -55,6 +55,10 @@
     <string name="label_home_velocity">Velocity:</string>
     <string name="label_home_loc_type">Location Type:</string>
     <string name="label_home_direction">Direction:</string>
+    <string name="label_settings_entry_ratio_y">Entry Ratio X</string>
+    <string name="edit_text_settings_entry_ratio_y_value">0.5</string>
+    <string name="edit_text_settings_entry_ratio_x_value">0.5</string>
+    <string name="label_settings_entry_ratio_x">Entry Ratio X</string>
 
 
 </resources>
