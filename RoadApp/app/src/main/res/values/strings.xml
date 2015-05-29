@@ -55,7 +55,7 @@
     <string name="label_home_velocity">Velocity:</string>
     <string name="label_home_loc_type">Location Type:</string>
     <string name="label_home_direction">Direction:</string>
-    <string name="label_settings_entry_ratio_y">Entry Ratio X</string>
+    <string name="label_settings_entry_ratio_y">Entry Ratio Y</string>
     <string name="edit_text_settings_entry_ratio_y_value">0.5</string>
     <string name="edit_text_settings_entry_ratio_x_value">0.5</string>
     <string name="label_settings_entry_ratio_x">Entry Ratio X</string>

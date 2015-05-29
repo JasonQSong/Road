@@ -649,12 +649,12 @@ public class MainActivity extends Activity
     @Override
     public void onSettingsChanged() {
         if (mSettingsFragment != null && mSettingsFragment.isResumed()) {
-            mDevice = ((EditText) findViewById(R.id.settings_device_id_value)).getText().toString();
-            mServer = ((EditText) findViewById(R.id.settings_device_id_value)).getText().toString();
-            mLongitudinal = Double.parseDouble(((EditText) findViewById(R.id.settings_device_id_value)).getText().toString());
-            mTransverse = Double.parseDouble(((EditText) findViewById(R.id.settings_device_id_value)).getText().toString());
+            //mDevice = ((EditText) findViewById(R.id.settings_device_id_value)).getText().toString();
+            mServer = ((EditText) findViewById(R.id.settings_server_value)).getText().toString();
+            mLongitudinal = Double.parseDouble(((EditText) findViewById(R.id.settings_longitudinal_wheelbase_value)).getText().toString());
+            mTransverse = Double.parseDouble(((EditText) findViewById(R.id.settings_transverse_wheelbase_value)).getText().toString());
             mEntryRatioX = Double.parseDouble(((EditText) findViewById(R.id.edit_text_settings_entry_ratio_x)).getText().toString());
-            mEntryRatioX = Double.parseDouble(((EditText) findViewById(R.id.edit_text_settings_entry_ratio_y)).getText().toString());
+            mEntryRatioY = Double.parseDouble(((EditText) findViewById(R.id.edit_text_settings_entry_ratio_y)).getText().toString());
         }
     }
 

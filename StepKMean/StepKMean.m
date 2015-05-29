@@ -1,14 +1,14 @@
 function ret=StepKMean(varargin)
 p=inputParser;
-defaultInputLastId='0';
+defaultInputLastId='5567ca5a8f759370526d564a';
 addOptional(p,'iid',defaultInputLastId);
 defaultInputHoleFilename='input-hole.txt';
-%defaultInputHoleFilename='..\RoadServer\data_kmean\fff1-1432677394451-hole.in';
+defaultInputHoleFilename='..\RoadServer\data_kmean\5567ca998f759370526d5a43-1432865433368-hole.in';
 addOptional(p,'ih',defaultInputHoleFilename);
 defaultInputMeanFilename='input-mean.txt';
-%defaultInputMeanFilename='..\RoadServer\data_kmean\fff0-1432677394451-mean.in';
+defaultInputMeanFilename='..\RoadServer\data_kmean\5567ca5a8f759370526d564a-1432865433368-mean.in';
 addOptional(p,'im',defaultInputMeanFilename);
-defaultOutputLastId='ffff';
+defaultOutputLastId='5567ca998f759370526d5a43';
 addOptional(p,'oid',defaultOutputLastId);
 defaultOutputMeanFilename='output-mean.txt';
 addOptional(p,'om',defaultOutputMeanFilename);
@@ -30,16 +30,16 @@ inputHoleFile=fopen(inputHoleFilename);
 inputMeanFile=fopen(inputMeanFilename);
 outputMeanFile=fopen(outputMeanFilename,'w');
 C=textscan(inputHoleFile,'%s%f%f%f%f');
-originHoleId=char(C{1});
-originHoleDiameter=C{2};
-originHoleDepth=C{3};
-originHoleLongitude=C{4};
-originHoleLatitude=C{5};
+originHoleId=char(C{1}');
+originHoleDiameter=C{2}';
+originHoleDepth=C{3}';
+originHoleLongitude=C{4}';
+originHoleLatitude=C{5}';
 C=textscan(inputMeanFile,'%f%f%f%f%d');
-meanHoldDiameter=C{1};
-meanHoleDepth=C{2};
-meanHoleLongitude=C{3};
-meanHoleLatitude=C{4};
+meanHoleDiameter=C{1}';
+meanHoleDepth=C{2}';
+meanHoleLongitude=C{3}';
+meanHoleLatitude=C{4}';
 
 originHoleBelongTo=zeros(1,length(originHoleId));
 
@@ -56,35 +56,35 @@ for i=1:length(originHoleId)
     end;
 end
 
-if start==0
-    for j=1:length(originHoleId)
-        jDiffLong=meanHoleLongitude-originHoleLongitude(j);
-        jDiffLagi=meanHoleLatitude-originHoleLatitude(j);
-        jDisSqr=jDiffLong.*jDiffLong+jDiffLagi.*jDiffLagi;
-        [~,jBelongTo]=min(jDisSqr);
-        if jBelongTo~=originHoleBelongTo(j)
-            originHoleBelongTo(j)=jBelongTo;
-        end
+for j=1:length(originHoleId)
+    jDiffLong=meanHoleLongitude-originHoleLongitude(j);
+    jDiffLagi=meanHoleLatitude-originHoleLatitude(j);
+    jDisSqr=jDiffLong.*jDiffLong+jDiffLagi.*jDiffLagi;
+    [~,jBelongTo]=min(jDisSqr);
+    if jBelongTo~=originHoleBelongTo(j)
+        originHoleBelongTo(j)=jBelongTo;
     end
-else
+end
+
+if start~=0
     for i=start:final
-        if isempty(meanHoldDiameter)
-            meanHoldDiameter=[meanHoldDiameter,originHoleDiameter(i)];
+        if isempty(meanHoleDiameter)
+            meanHoleDiameter=[meanHoleDiameter,originHoleDiameter(i)];
             meanHoleDepth=[meanHoleDepth,originHoleDepth(i)];
             meanHoleLongitude=[meanHoleLongitude,originHoleLongitude(i)];
             meanHoleLatitude=[meanHoleLatitude,originHoleLatitude(i)];
-            originHoleBelongTo(i)=length(meanHoldDiameter);
+            originHoleBelongTo(i)=length(meanHoleDiameter);
             continue;
         end
         iDiffLong=meanHoleLongitude-originHoleLongitude(i);
         iDiffLagi=meanHoleLatitude-originHoleLatitude(i);
         iDisSqr=iDiffLong.*iDiffLong+iDiffLagi.*iDiffLagi;
-        if min(iDisSqr)>0.001*0.001
-            meanHoldDiameter=[meanHoldDiameter originHoleDiameter(i)];
+        if min(iDisSqr)>0.0001*0.0001
+            meanHoleDiameter=[meanHoleDiameter originHoleDiameter(i)];
             meanHoleDepth=[meanHoleDepth originHoleDepth(i)];
             meanHoleLongitude=[meanHoleLongitude originHoleLongitude(i)];
             meanHoleLatitude=[meanHoleLatitude originHoleLatitude(i)];
-            originHoleBelongTo(i)=length(meanHoldDiameter);
+            originHoleBelongTo(i)=length(meanHoleDiameter);
             continue;
         else
             [~,iBelongTo]=min(iDisSqr);
@@ -92,8 +92,8 @@ else
             belongToChanged=true;
             while belongToChanged
                 belongToChanged=false;
-                for j=1:length(meanHoldDiameter)
-                    meanHoldDiameter(j)=max(originHoleDiameter(originHoleBelongTo==j));
+                for j=1:length(meanHoleDiameter)
+                    meanHoleDiameter(j)=max(originHoleDiameter(originHoleBelongTo==j));
                     meanHoleDepth(j)=max(originHoleDepth(originHoleBelongTo==j));
                     meanHoleLongitude(j)=mean(originHoleLongitude(originHoleBelongTo==j));
                     meanHoleLatitude(j)=mean(originHoleLatitude(originHoleBelongTo==j));
@@ -112,10 +112,10 @@ else
         end
     end
 end
-meanHoleTrust=zeros(1,length(meanHoldDiameter));
-for j=1:length(meanHoldDiameter)
+meanHoleTrust=zeros(1,length(meanHoleDiameter));
+for j=1:length(meanHoleDiameter)
     meanHoleTrust(j)=sum(originHoleBelongTo==j);
-    fprintf(outputMeanFile,'%f %f %f %f %d\n',meanHoldDiameter(j),meanHoleDepth(j),meanHoleLongitude(j),meanHoleLatitude(j),meanHoleTrust(j));
+    fprintf(outputMeanFile,'%f %f %f %f %d\n',meanHoleDiameter(j),meanHoleDepth(j),meanHoleLongitude(j),meanHoleLatitude(j),meanHoleTrust(j));
 end
 
 
