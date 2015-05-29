@@ -293,7 +293,7 @@ public class MainActivity extends Activity
         //option.setCoorType("gcj02");
         option.setCoorType("bd09ll");//返回的定位结果是百度经纬度,默认值gcj02
         option.setScanSpan(5000);//设置发起定位请求的间隔时间为5000ms
-        option.setIsNeedAddress(true);//返回的定位结果包含地址信息
+        option.setIsNeedAddress(true);//返回的定位结果包含地理信息
         option.setNeedDeviceDirect(true);//返回的定位结果包含手机机头的方向
         option.setOpenGps(true);
         mBDLocationClient.setLocOption(option);
@@ -317,52 +317,46 @@ public class MainActivity extends Activity
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        surroundingHolesAdapter.notifyDataSetChanged();
-                    }
-                });
             }
         });
     }
 
-    protected void updateSurroundingHoles(JSONArray jsonArray) {
-        surroundingHoles.clear();
-        try {
-            for (int i = 0; i < jsonArray.length(); i++) {
-                CombinedHoleModel model = new CombinedHoleModel();
-                model.fromJson(jsonArray.getJSONObject(i));
-                if (mLatitude != 0 && mLongitude != 0) {
-                    model.dis = DistanceUtil.getDistance(new LatLng(mLatitude, mLongitude), new LatLng(mLastLocation.latitude, mLastLocation.longitude));
-                }
-                surroundingHoles.add(model);
-            }
-            if (mHomeFragment != null && mHomeFragment.isResumed() && mHomeFragment.mMapView != null) {
-                //mHomeFragment.mMapView.getMap().clear();
-                for (int i = 0; i < surroundingHoles.size(); i++) {
-                    CombinedHoleModel model = surroundingHoles.get(i);
-                    OverlayOptions option = new DotOptions()
-                            .center(new LatLng(model.latitude, model.longitude))
-                            .radius(50)
-                            .visible(true)
-                            .zIndex(5000);
-                    Log.d("Overlay", "lati" + model.latitude + "long" + model.longitude);
-                    mHomeFragment.mMapView.getMap().addOverlay(option);
-                    mHomeFragment.mMapView.getMap().addOverlay(new CircleOptions()
-                                    .center(new LatLng(mLatitude, mLongitude))
-                                    .fillColor(0xAA66CCFF)
-                    );
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        if (mHomeFragment != null && mHomeFragment.isResumed() && mHomeFragment.mMapView != null) {
-            mHomeFragment.mMapView.getMap().clear();
+    protected void updateSurroundingHoles(final JSONArray jsonArray) {
+        Log.d("UpdateSurroundingHoles", "jsonArrayLength:" + jsonArray.length() + ",surroundingHoles" + surroundingHoles.size());
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                surroundingHoles.clear();
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    CombinedHoleModel model = new CombinedHoleModel();
+                    try {
+                        model.fromJson(jsonArray.getJSONObject(i));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
 
-
-        }
+                    if (mLatitude != 0 && mLongitude != 0) {
+                        model.dis = DistanceUtil.getDistance(new LatLng(mLatitude, mLongitude), new LatLng(model.latitude, model.longitude));
+                    }
+                    surroundingHoles.add( model);
+                    surroundingHolesAdapter.notifyDataSetChanged();
+                }
+                if (mHomeFragment != null && mHomeFragment.isResumed() && mHomeFragment.mMapView != null) {
+                    mHomeFragment.mMapView.getMap().clear();
+                    for (int i = 0; i < surroundingHoles.size(); i++) {
+                        CombinedHoleModel model = surroundingHoles.get(i);
+                        int radius=(int)Math.ceil( Math.sqrt(model.trust));
+                        radius=radius<10?radius:10;
+                        OverlayOptions option = new DotOptions()
+                                .center(new LatLng(model.latitude, model.longitude))
+                                .radius(radius)
+                                .color(Color.RED);
+                        Log.d("Overlay", "lati" + model.latitude + "long" + model.longitude);
+                        mHomeFragment.mMapView.getMap().addOverlay(option);
+                    }
+                }
+            }
+        });
     }
 
     final ArrayList<CombinedHoleModel> surroundingHoles = new ArrayList<CombinedHoleModel>();
@@ -422,11 +416,10 @@ public class MainActivity extends Activity
                     nowLocationModel.latitude = mLatitude;
                     nowLocationModel.locType = mLocationType;
                     nowLocationModel.direction = mDirection;
-                    double distance = 0;
                     mVelocity = 0;
                     if (mLastLocation != null) {
-                        DistanceUtil.getDistance(new LatLng(mLatitude, mLongitude), new LatLng(mLastLocation.latitude, mLastLocation.longitude));
-                        mVelocity = distance * 1000 / (mLastLocation.timeUTC - nowLocationModel.timeUTC);
+                        double distance= DistanceUtil.getDistance(new LatLng(mLatitude, mLongitude), new LatLng(mLastLocation.latitude, mLastLocation.longitude));
+                        mVelocity = distance * 1000 / (nowLocationModel.timeUTC- mLastLocation.timeUTC );
                     }
                     nowLocationModel.velocity = mVelocity;
                     if (mHomeFragment != null && mHomeFragment.isResumed()) {
